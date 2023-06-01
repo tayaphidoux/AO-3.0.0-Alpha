@@ -25,6 +25,7 @@ string b_sSitRand;
 //string b_sGroundSitLoop;
 string b_sGroundSitRand;
 list g_lCheckBoxes = ["▢","▣"];
+list g_lTimerButtons = ["+1","+5","+10","-1","-5","-10"];
 //
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName)
 {
@@ -118,7 +119,7 @@ MenuStanding(key kID, integer iAuth)
         lButtons = ["Select Stand","Stand Time"];
     }
     // Start dialog.
-    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Stands~Main");
+    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Stand~Main");
 }
 
 MenuStandTime(key kID, integer iAuth)
@@ -130,11 +131,7 @@ MenuStandTime(key kID, integer iAuth)
                 "\n"+b_sStandRand+
                 "\n 0 = Disabled";
     // Populate Buttons list.
-    list lButtons = [
-        "+1","+5","+10",
-        "-1","-5","-10",
-        "+Custom","-Custom"
-    ];
+    list lButtons = g_lTimerButtons+["Custom"];
     // Start dialog.
     Dialog(kID, sPrompt, lButtons, ["Disable",UPMENU], 0, iAuth, "Stand~Time");
 }
@@ -158,7 +155,7 @@ MenuWalking(key kID, integer iAuth)
         lButtons = ["Select Walk","Walk Time"];
     }
     // Start dialog.
-    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Walks~Main");
+    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Walk~Main");
 }
 
 MenuWalkTime(key kID, integer iAuth)
@@ -170,11 +167,7 @@ MenuWalkTime(key kID, integer iAuth)
                 "\n"+b_sWalkRand+
                 "\n 0 = Disabled";
     // Populate Buttons list.
-    list lButtons = [
-        "+1","+5","+10",
-        "-1","-5","-10",
-        "+Custom","-Custom"
-    ];
+    list lButtons = g_lTimerButtons+["Custom"];
     // Start dialog.
     Dialog(kID, sPrompt, lButtons, ["Disable",UPMENU], 0, iAuth, "Walk~Time");
 }
@@ -198,7 +191,7 @@ MenuSitting(key kID, integer iAuth)
         lButtons = ["Select Sit","Sit Time"];
     }
     // Start dialog.
-    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Sits~Main");
+    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Sit~Main");
 }
 
 MenuSitTime(key kID, integer iAuth)
@@ -210,11 +203,7 @@ MenuSitTime(key kID, integer iAuth)
                 "\n"+b_sSitRand+
                 "\n 0 = Disabled";
     // Populate Buttons list.
-    list lButtons = [
-        "+1","+5","+10",
-        "-1","-5","-10",
-        "+Custom","-Custom"
-    ];
+    list lButtons = g_lTimerButtons+["Custom"];
     // Start dialog.
     Dialog(kID, sPrompt, lButtons, ["Disable",UPMENU], 0, iAuth, "Sit~Time");
 }
@@ -237,7 +226,7 @@ MenuGSitting(key kID, integer iAuth)
         lButtons = ["Select GroundSit","GroundSit Time"];
     }
     // Start dialog.
-    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "GroundSits~Main");
+    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "GroundSit~Main");
 }
 
 MenuGroundSitTime(key kID, integer iAuth)
@@ -248,11 +237,7 @@ MenuGroundSitTime(key kID, integer iAuth)
     sPrompt +=  "\n Current GroundSit Timer:"+llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_gsitchange")+
                 "\n 0 = Disabled";
     // Populate Buttons list.
-    list lButtons = [
-        "+1","+5","+10",
-        "-1","-5","-10",
-        "+Custom","-Custom"
-    ];
+    list lButtons = g_lTimerButtons+["Custom"];
     // Start dialog.
     Dialog(kID, sPrompt, lButtons, ["Disable",UPMENU], 0, iAuth, "GroundSit~Time");
 }
@@ -289,34 +274,34 @@ default
                 else if( sMsg == "GroundSit")
                 {
                     iRespring = FALSE;
-		    MenuGSitting(kID, iAuth);
+            MenuGSitting(kID, iAuth);
                 }
                 else if( sMsg == "Sitting")
                 {
                     iRespring = FALSE;
-		    MenuSitting(kID, iAuth);
+            MenuSitting(kID, iAuth);
                 }
                 else if( sMsg == "Standing")
                 {
                     iRespring = FALSE;
-		    MenuStanding(kID, iAuth);
+            MenuStanding(kID, iAuth);
                 }
                 else if( sMsg == "Walking")
                 {
                     iRespring = FALSE;
-		    MenuWalking(kID, iAuth);
+            MenuWalking(kID, iAuth);
                 }
                 if(iRespring)
                 {
                     MenuAnims(kID,iAuth);
                 }
             }
-            else if( sMenu == "Stands~Main")
+            else if( sMenu == "Stand~Main")
             {
                 if (sMsg == UPMENU)
                 {
                     iRespring = FALSE;
-		    MenuAnims(kID, iAuth);
+            MenuAnims(kID, iAuth);
                 }
                 else if (sMsg == b_sStandRand)
                 {
@@ -372,12 +357,12 @@ default
                     MenuStandTime(kID, iAuth);
                 }
             }
-            else if( sMenu == "Walks~Main")
+            else if( sMenu == "Walk~Main")
             {
                 if (sMsg == UPMENU)
                 {
                     iRespring = FALSE;
-		    MenuAnims(kID, iAuth);
+            MenuAnims(kID, iAuth);
                 }
                 else if (sMsg == b_sWalkRand)
                 {
@@ -433,12 +418,12 @@ default
                     MenuWalkTime(kID, iAuth);
                 }
             }
-	    else if( sMenu == "Sits~Main")
+        else if( sMenu == "Sit~Main")
             {
                 if (sMsg == UPMENU)
                 {
                     iRespring = FALSE;
-		    MenuAnims(kID, iAuth);
+            MenuAnims(kID, iAuth);
                 }
                 else if (sMsg == b_sSitRand)
                 {
@@ -494,12 +479,12 @@ default
                     MenuSitTime(kID, iAuth);
                 }
             }
-            else if( sMenu == "GroundSits~Main")
+            else if( sMenu == "GroundSit~Main")
             {
                 if (sMsg == UPMENU)
                 {
                     iRespring = FALSE;
-		    MenuAnims(kID, iAuth);
+            MenuAnims(kID, iAuth);
                 }
                 else if (sMsg == b_sGroundSitRand)
                 {
