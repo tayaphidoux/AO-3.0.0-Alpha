@@ -162,7 +162,7 @@ MenuAdmin(key kID, integer iAuth)
 {
     string sPrompt = "|=====Adnimistration=====|";
 
-    list lButtons  = ["ResetAO"];
+    list lButtons  = ["Reset AO"];
     list lUtilityButtons = [];// this is only here so we can set ultities to respect online and offline mode.
 
     if( (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_online")) // we only need certain buttons when they are nesissary.
