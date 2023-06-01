@@ -198,7 +198,7 @@ default
                 llOwnerSay("Clearing old menues!");
                 llLinksetDataDelete(llToLower(llLinksetDataRead("addon_name"))+"_menu");
             }
-            llSetTimerEvent(1);
+            llSetTimerEvent(60);
         }
     }
 
