@@ -12,10 +12,8 @@
 */
 
 // Load note cards and set aniamtin states
-
-integer g_iCardLine = 0;
-
 key g_kCard;
+integer g_iCardLine =0;
 
 list g_lAnimStates = [ //http://wiki.secondlife.com/wiki/LlSetAnimationOverride
     "Crouching","CrouchWalking","Falling Down","Flying","FlyingSlow",
@@ -26,6 +24,17 @@ list g_lAnimStates = [ //http://wiki.secondlife.com/wiki/LlSetAnimationOverride
 
 list g_lSwimStates = ["Swim Forward","Swim Hover","Swim Slow","Swim Up","Swim Down"];
 
+check_settings(string sToken, string sDefaulVal)
+{
+    if(!~llListFindList(llLinksetDataListKeys(0,0),[sToken])) // token/key doesn't exist in the list of keys
+    {
+        llLinksetDataWrite(sToken, sDefaulVal);
+    }
+    else if(llLinksetDataRead(sToken) == "")
+    {
+        llLinksetDataWrite(sToken, sDefaulVal);
+    }
+}
 //
 default
 {
@@ -33,18 +42,14 @@ default
     {
         if(iAction == LINKSETDATA_UPDATE)
         {
-            if(sName == llToLower(llLinksetDataRead("addon_name"))+"_card" && sVal != "" && llGetInventoryType(sVal) == INVENTORY_NOTECARD && 
-            !(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_loaded"))
+            if(sName == "ao_card" && sVal != "" && llGetInventoryType(sVal) == INVENTORY_NOTECARD &&
+            !(integer)llLinksetDataRead("ao_loaded"))
             {
                 llOwnerSay("loading note card "+sVal);
                 llResetTime();
                 g_iCardLine = 0;
                 g_kCard = llGetNotecardLine(sVal,g_iCardLine);
             }
-        }
-        else if(iAction == LINKSETDATA_RESET)
-        {
-            llResetScript();
         }
     }
 
@@ -151,7 +156,25 @@ default
                     string sAnim = sData;
                     if(~llSubStringIndex(sData,"|") || ~llSubStringIndex(sData,","))
                     {
-                        llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_"+sAnimationState,llDumpList2String(lTemp,","));
+                        if(llLinksetDataRead("ao_"+sAnimationState) == "")
+                            // check if a list aleady exists if not just dump the list to the list, else apend the second list to the list, this allows multipel [ state name ] options for a single animation set to compensate for string length issues.
+                        {
+                            llLinksetDataWrite("ao_"+sAnimationState,llDumpList2String(lTemp,","));
+                        }
+                        else
+                        {
+                            llLinksetDataWrite("ao_"+sAnimationState,llLinksetDataRead("ao_"+sAnimationState)+","+llDumpList2String(lTemp,","));
+                        }
+                        if(sAnimationState == "Standing" || sAnimationState == "Sitting" || sAnimationState == "Sitting on Ground")
+                        {
+                            check_settings("ao_"+sAnimationState+"change",(string)120);
+                            check_settings("ao_"+sAnimationState+"rand",(string)TRUE);
+                        }
+                        else
+                        {
+                            check_settings("ao_"+sAnimationState+"change",(string)0);
+                            check_settings("ao_"+sAnimationState+"rand",(string)FALSE);
+                        }
                         sAnim = llList2String(lTemp,0);
                     }
                     if(llGetInventoryType(sAnim) == INVENTORY_ANIMATION)
@@ -160,19 +183,19 @@ default
                     }
                 }
                 @next;
-                g_kCard = llGetNotecardLine(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_card"),++g_iCardLine);
+                g_kCard = llGetNotecardLine(llLinksetDataRead("ao_card"),++g_iCardLine);
             }
             else
             {
                 llOwnerSay(
-                    "Note Card "+llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_card")+" Loaded into Linkset Data in "+(string)llGetTime()+"s"+
+                    "Note Card "+llLinksetDataRead("ao_card")+" Loaded into Linkset Data in "+(string)llGetTime()+"s"+
                     "\nLinksetMemory free: "+(string)llLinksetDataAvailable()+"bytes"
                 );
 
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_loaded",(string)TRUE);
+                llLinksetDataWrite("ao_loaded",(string)TRUE);
                 g_kCard = "";
             }
         }
-        
+
     }
 }
