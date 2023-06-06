@@ -11,18 +11,40 @@
     ------------------------------------
 */
 //string g_sVersion = "1.2.0"; // version (major.minor(no greater than 9 if so rolle to major).bug)
+list g_lAnimStates = [ //http://wiki.secondlife.com/wiki/LlSetAnimationOverride
+    "Crouching","CrouchWalking","Falling Down","Flying","FlyingSlow",
+    "Hovering","Hovering Down","Hovering Up","Jumping","Landing",
+    "PreJumping","Running","Standing","Sitting","Sitting on Ground","Standing Up",
+    "Striding","Soft Landing","Taking Off","Turning Left","Turning Right","Walking"
+];
+
+list g_lSwimStates = ["Swim Forward","Swim Hover","Swim Slow","Swim Up","Swim Down"];
 
 default
 {
     state_entry()
     {
-        llSetTimerEvent(1);
+        if((integer)llLinksetDataRead("ao_power"))
+        {
+            llSetTimerEvent(1);
+        }
+        else
+        {
+            llSetTimerEvent(0);
+        }
     }
     attach(key kID)
     {
         if(kID != NULL_KEY)
         {
-            llSetTimerEvent(1);
+            if((integer)llLinksetDataRead("ao_power"))
+            {
+                llSetTimerEvent(1);
+            }
+            else
+            {
+                llSetTimerEvent(0);
+            }
         }
         else
         {
@@ -33,7 +55,7 @@ default
     {
         if( iAction == LINKSETDATA_UPDATE)
         {
-            if(sName == llToLower(llLinksetDataRead("addon_name"))+"_power")
+            if(sName == "ao_power")
             {
                 if((integer)sValue)
                 {
@@ -45,143 +67,94 @@ default
                 }
             }
         }
-        else if( iAction == LINKSETDATA_RESET)
-        {
-            llResetScript();
-        }
     }
     timer()
     {
-    
         integer iTyping = (llGetAgentInfo(llGetOwner())&AGENT_TYPING);
         vector vPos = llGetPos();
         float fWater = llWater(ZERO_VECTOR);
         if(vPos.z <= fWater)
         {
-            llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_swiming",(string)TRUE);
+            llLinksetDataWrite("ao_swiming",(string)TRUE);
         }
         else
         {
-            llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_swiming",(string)FALSE);
+            llLinksetDataWrite("ao_swiming",(string)FALSE);
         }
 
-        if(iTyping != (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_typing"))
+        if(iTyping != (integer)llLinksetDataRead("ao_typing"))
         {
-            llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_typing",(string)iTyping);
+            llLinksetDataWrite("ao_typing",(string)iTyping);
         }
 
         // Detact if we are in water to enable the swimming anims.
-        //llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_animstate",llGetAnimation(llGetOwner()));
+        //llLinksetDataWrite("ao_animstate",llGetAnimation(llGetOwner()));
+        integer i;
+        integer iEnd = llGetListLength(g_lAnimStates);
+        for(i; i<llGetListLength(g_lAnimStates); i++)
+        {
+            string sState = llList2String(g_lAnimStates,i);\
+            if((integer)llLinksetDataRead("ao_"+sState+"change") != 0 && llGetUnixTime() > (integer)llLinksetDataRead("ao_"+sState+"timer"))
+            {
+                list lAnims = llParseString2List(llLinksetDataRead("ao_"+sState),[","],[]);
+                integer iIndex;
+                if((integer)llLinksetDataRead("ao_"+sState+"rand"))
+                {
+                    iIndex = (integer)llFrand((llGetListLength(lAnims)-1));
+                }
+                else
+                {
+                    iIndex = llListFindList(lAnims,[llLinksetDataRead(sState)])+1;
+                    if ( iIndex >= llGetListLength(lAnims))
+                    {
+                        iIndex = 0;
+                    }
+                }
+                string sAnim = llList2String(lAnims,iIndex);
+                if(llGetInventoryType(sAnim) == INVENTORY_ANIMATION && sAnim != llLinksetDataRead(sState))
+                {
+                    llLinksetDataWrite(sState,sAnim);
+                    llLinksetDataWrite("ao_"+sState+"timer",(string)(llGetUnixTime()+(integer)llLinksetDataRead("ao_"+sState+"change")));
+                }
+                sAnim = "";
+                lAnims = [];
+            }
+        }
 
-        if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_standchange") != 0 && llGetUnixTime() > (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_standtimer"))
+        if(iTyping != (integer)llLinksetDataRead("ao_typing"))
         {
-            list lAnims = llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_Standing"),[","],[]);
-            integer i;
-            if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_standrand"))
-            {
-                i = (integer)llFrand((llGetListLength(lAnims)-1));
-            }
-            else
-            {
-                i = llListFindList(lAnims,[llLinksetDataRead("Standing")])+1;
-                if ( i >= llGetListLength(lAnims))
-                {
-                    i = 0;
-                }
-            }
-            string sAnim = llList2String(lAnims,i);
-            if(llGetInventoryType(sAnim) == INVENTORY_ANIMATION && sAnim != llLinksetDataRead("Standing"))
-            {
-                llLinksetDataWrite("Standing",sAnim);
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_standtimer",(string)(llGetUnixTime()+(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_standchange")));
-            }
-            sAnim = "";
-            lAnims = [];
+            llLinksetDataWrite("ao_typing",(string)iTyping);
         }
-        else if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_walkchange") != 0 && llGetUnixTime() > (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_walktimer"))
+        i=0;
+        iEnd = llGetListLength(g_lSwimStates);
+        for(i; i<llGetListLength(g_lSwimStates); i++)
         {
-            list lAnims = llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_Walking"),[","],[]);
-            integer i;
-            if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_walkrand"))
+            string sState = llList2String(g_lSwimStates,i);
+            if((integer)llLinksetDataRead("ao_"+sState+"change") && llGetUnixTime() > (integer)llLinksetDataRead("ao_"+sState+"timer"))
             {
-                i = (integer)llFrand((llGetListLength(lAnims)-1));
-            }
-            else
-            {
-                i = llListFindList(lAnims,[llLinksetDataRead("Walking")])+1;
-                if ( i >= llGetListLength(lAnims))
+                list lAnims = llParseString2List(llLinksetDataRead("ao_"+sState),[","],[]);
+                integer iIndex;
+                if((integer)llLinksetDataRead("ao_"+sState+"rand"))
                 {
-                    i = 0;
+                    iIndex = (integer)llFrand((llGetListLength(lAnims)-1));
                 }
-            }
-            string sAnim = llList2String(lAnims,i);
-            if(llGetInventoryType(sAnim) == INVENTORY_ANIMATION && sAnim != llLinksetDataRead("Walking"))
-            {
-                llLinksetDataWrite("Walking",sAnim);
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_walktimer",(string)(llGetUnixTime()+(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_walkchange")));
-            }
-            sAnim = "";
-            lAnims = [];
-        }
-        else if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitchange") != 0 && (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitctl") && llGetUnixTime() > (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sittimer"))
-        {
-            list lAnims = llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_Sitting"),[","],[]);
-            integer i;
-            if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitrand"))
-            {
-                llOwnerSay("Choosing random animation for sit");
-                i = (integer)llFrand((llGetListLength(lAnims)-1));
-            }
-            else
-            {
-                llOwnerSay("Choosing next animation for sitting");
-                i = llListFindList(lAnims,[llLinksetDataRead("Sitting")])+1;
-                if ( i >= llGetListLength(lAnims))
+                else
                 {
-                    i = 0;
+                    iIndex = llListFindList(lAnims,[llLinksetDataRead(sState)])+1;
+                    if ( iIndex >= llGetListLength(lAnims))
+                    {
+                        iIndex = 0;
+                    }
                 }
-            }
-            string sAnim = llList2String(lAnims,i);
-            if(llGetInventoryType(sAnim) == INVENTORY_ANIMATION && sAnim != llLinksetDataRead("Sitting"))
-            {
-                llOwnerSay("Changing Sit to "+sAnim);
-                llLinksetDataWrite("Sitting",sAnim);
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_sittimer",(string)(llGetUnixTime()+(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitchange")));
-            }
-            sAnim = "";
-            lAnims = [];
-        }
-        else if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_gsitchange") != 0 && llGetUnixTime() > (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_gsittimer"))
-        {
-            list lAnims = llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_Sitting on Ground"),[","],[]);
-            integer i;
-            if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_gsitrand"))
-            {
-                i = (integer)llFrand((llGetListLength(lAnims)-1));
-            }
-            else
-            {
-                i = llListFindList(lAnims,[llLinksetDataRead("Sitting on Ground")])+1;
-                if ( i >= llGetListLength(lAnims))
+                string sAnim = llList2String(lAnims,iIndex);
+                if(llGetInventoryType(sAnim) == INVENTORY_ANIMATION && sAnim != llLinksetDataRead(sState))
                 {
-                    i = 0;
+                    llLinksetDataWrite(sState,sAnim);
+                    llLinksetDataWrite("ao_"+sState+"timer",(string)(llGetUnixTime()+(integer)llLinksetDataRead("ao_"+sState+"change")));
                 }
+                sAnim = "";
+                lAnims = [];
             }
-            string sAnim = llList2String(lAnims,i);
-            llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_gsitold",llLinksetDataRead("Sitting on Ground"));
-            if((llGetInventoryType(sAnim) & INVENTORY_ANIMATION) && sAnim != llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_gsitold"))
-            {
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_gsittimer",(string)(llGetUnixTime()+(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_gsitchange")));
-                llLinksetDataWrite("Sitting on Ground",sAnim);
-                if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere"))
-                {
-                    llStopAnimation(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_gsitold"));
-                    llSleep(0.1);
-                    llStartAnimation(sAnim);
-            `   }
-            }
-            sAnim = "";
-            lAnims = [];
         }
     }
 }
