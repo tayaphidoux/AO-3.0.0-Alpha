@@ -1,14 +1,7 @@
-//integer CMD_ZERO            = 0;
-integer CMD_OWNER           = 500;
-//integer CMD_TRUSTED         = 501;
-//integer CMD_GROUP           = 502;
-integer CMD_WEARER          = 503;
-//integer CMD_EVERYONE        = 504;
-//integer CMD_BLOCKED         = 598; // <--- Used in auth_request, will not return on a CMD_ZERO
-//integer CMD_RLV_RELAY       = 507;
-//integer CMD_SAFEWORD        = 510;
-//integer CMD_RELAY_SAFEWORD  = 511;
-//integer CMD_NOACCESS        = 599;
+integer DIALOG          = -9000;
+integer DIALOG_RESPONSE = -9001;
+//integer DIALOG_TIMEOUT  = -9002;
+integer MENU_REQUEST    = -9003;
 
 //integer g_iMenuStride;
 integer g_iPage = 0;
@@ -18,93 +11,52 @@ string UPMENU = "BACK";
 //string b_sLock;
 //string b_sAccess;
 string b_sPower;
+string b_sTyping;
 string b_sSitAny;
 // these buttons will be used for making loops.
 string b_sSitAO;
+string b_sShuffle;
 list g_lCheckBoxes = ["▢","▣"];
 list g_lCustomCards = [];
+list g_lAnims2Choose = [];
+
+list g_lAnimStates = [ //http://wiki.secondlife.com/wiki/LlSetAnimationOverride
+    "Crouching","CrouchWalking","Falling Down","Flying","FlyingSlow",
+    "Hovering","Hovering Down","Hovering Up","Jumping","Landing",
+    "PreJumping","Running","Standing","Sitting","Sitting on Ground","Standing Up",
+    "Striding","Soft Landing","Taking Off","Turning Left","Turning Right","Walking"
+];
+
+list g_lSwimStates = ["Swim Forward","Swim Hover","Swim Slow","Swim Up","Swim Down"];
 //
 
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName)
 {
-    list g_lMenuIDs = llCSV2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_menu"));
-    integer iChannel = llRound(llFrand(10000000)) + 100000;
-    while (~llListFindList(g_lMenuIDs, [iChannel]))
-    {
-        iChannel = llRound(llFrand(10000000)) + 100000;
-    }
-    integer iListener = llListen(iChannel, "",kID, "");
-    integer iTime = llGetUnixTime() + 180;
-    integer iIndex = llListFindList(g_lMenuIDs, [kID]);
-    if (~iIndex)
-    {
-        llListenRemove(llList2Integer(g_lMenuIDs,2));
-        g_lMenuIDs = llListReplaceList(g_lMenuIDs,[kID, iChannel, iListener, iTime, sName, iAuth],iIndex,iIndex+4);
-    }
-    else
-    {
-        g_lMenuIDs = [kID, iChannel, iListener, iTime, sName, iAuth];
-    }
-    llDialog(kID,sPrompt,SortButtons(lChoices,lUtilityButtons),iChannel);
-    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_menu",llDumpList2String(g_lMenuIDs,","));
+    llMessageLinked( LINK_SET, DIALOG, sPrompt+","+llDumpList2String(lChoices,"`")+","+llDumpList2String(lUtilityButtons,"`")+","+(string)iAuth+","+sName, kID);
     iPage = 0;
-    g_lMenuIDs = [];
-}
-
-list SortButtons(list lButtons, list lStaticButtons)
-{
-    list lSpacers;
-    list lAllButtons = lButtons + lStaticButtons;
-    //cutting off too many buttons, no multi page menus as of now
-    while (llGetListLength(lAllButtons)>12)
-    {
-        lButtons = llDeleteSubList(lButtons,0,0);
-        lAllButtons = lButtons + lStaticButtons;
-    }
-    while (llGetListLength(lAllButtons) % 3 != 0 && llGetListLength(lAllButtons) < 12)
-    {
-        lSpacers += "-";
-        lAllButtons = lButtons + lSpacers + lStaticButtons;
-    }
-    integer i = llListFindList(lAllButtons, ["BACK"]);
-    if (~i)
-    {
-        lAllButtons = llDeleteSubList(lAllButtons, i, i);
-    }
-    list lOut = llList2List(lAllButtons, 9, 11);
-    lOut += llList2List(lAllButtons, 6, 8);
-    lOut += llList2List(lAllButtons, 3, 5);
-    lOut += llList2List(lAllButtons, 0, 2);
-    if (~i)
-    {
-        lOut = llListInsertList(lOut, ["BACK"], 2);
-    }
-    lAllButtons = [];
-    lButtons = [];
-    lSpacers = [];
-    lStaticButtons = [];
-    return lOut;
 }
 
 Menu(key kID, integer iAuth)
 {
-    string sPrompt = "|====="+llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_addon")+" Main=====|"+
-        "\n Version: "+llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_ver");
+    string sPrompt = "|====="+llLinksetDataRead("ao_addon")+" Main=====|"+
+        "\n Version: "+llLinksetDataRead("ao_ver");
     // load toggle buttons.
-    b_sPower = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_power"))+"Power";
-    b_sSitAny= llList2String(g_lCheckBoxes,(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere"))+"Sit Anywhere";
-    b_sSitAO = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitctl"))+"Sit AO";
+    b_sPower    = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_power"))+"Power";
+    b_sTyping   = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_typingctl"))+"Typing AO";
+    b_sSitAny   = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_sitanywhere"))+"Sit Anywhere";
+    b_sSitAO    = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_sitctl"))+"Sit AO";
     // set status information.
-    sPrompt +=  "\nNotecard:"+llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_card")+
-                "\n"+llList2String(g_lCheckBoxes,(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_loaded"))+"Loaded"+
-                "\n"+llList2String(g_lCheckBoxes,(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_online"))+"Collar Addon"+
+    sPrompt +=  "\nNotecard:"+llLinksetDataRead("ao_card")+
+                "\n"+llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_loaded"))+"Loaded"+
+                "\n"+llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_online"))+"Collar Addon"+
                 "\n"+b_sPower+
+                "\n"+b_sTyping+
                 "\n"+b_sSitAny
     ;
     // Populate Buttons list.
-    list lButtons  = [b_sPower,"Load",b_sSitAny,b_sSitAO,"Anims"];
+    list lButtons  = [b_sPower,"Load",b_sTyping,b_sSitAny,b_sSitAO,"Anims"];
     // Start dialog.
-    Dialog(kID, sPrompt, lButtons, ["Admin", UPMENU], 0, iAuth, "Menu~Main");
+    Dialog(kID, sPrompt, lButtons, ["Admin"], 0, iAuth, "Menu~Main");
 }
 
 MenuLoad(key kID, integer iPage, integer iAuth)
@@ -145,10 +97,10 @@ MenuLoad(key kID, integer iPage, integer iAuth)
         lButtons += llList2List(g_lCustomCards,i,i);
         i += 2;
     }
-    list lStaticButtons = ["BACK"];
+    list lStaticButtons = [UPMENU];
     if (llGetListLength(lButtons) > 11)
     {
-        lStaticButtons = ["◄","►","BACK"];
+        lStaticButtons = ["◄","►",UPMENU];
         g_iNumberOfPages = llGetListLength(lButtons)/9;
         lButtons = llList2List(lButtons,iPage*9,iPage*9+8);
     }
@@ -158,14 +110,117 @@ MenuLoad(key kID, integer iPage, integer iAuth)
     Dialog(kID, sPrompt, lButtons, lStaticButtons, iPage, iAuth,"Menu~Load");
 }
 
+MenuMultiAnims(key kID, integer iPage, integer iAuth)
+{
+    if (!iPage)
+    {
+        g_iPage = 0;
+    }
+    string sPrompt = "|=====Multi Anims=====|";
+    list lButtons  = [];
+    integer i;
+    integer iEnd = llGetListLength(g_lAnimStates);
+    for (i; i<iEnd; i++)
+    {
+        string sState = llList2String(g_lAnimStates,i);
+        if(llLinksetDataRead("ao_"+sState) != "")
+        {
+            lButtons += [sState];
+        }
+    }
+    i = 0;
+    iEnd = llGetListLength(g_lSwimStates)-1;
+    for (i; i<iEnd; i++)
+    {
+        string sState = llList2String(g_lSwimStates,i);
+        if(llLinksetDataRead("ao_"+sState) != "")
+        {
+            lButtons += [sState];
+        }
+    }
+    list lStaticButtons = [UPMENU];
+    if (llGetListLength(lButtons) > 11)
+    {
+        lStaticButtons = ["◄","►",UPMENU];
+        g_iNumberOfPages = llGetListLength(lButtons)/9;
+        lButtons = llList2List(lButtons,iPage*9,iPage*9+8);
+    }
+    // Start dialog.
+    Dialog(kID, sPrompt, lButtons, lStaticButtons, iPage, iAuth, "Menu~MultiAnims");
+}
+
+MenuAnimation(key kID, string sAnimState, integer iAuth)
+{
+    string sPrompt = "|====="+sAnimState+"=====|";
+    // load toggle buttons.
+    b_sShuffle = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_"+sAnimState+"rand"))+"Shuffle";
+    // set status information.
+    sPrompt +=  "\n Current "+sAnimState+" Timer:"+llLinksetDataRead("ao_"+sAnimState+"change")+
+                "\n ► Next Animation on the list ."+
+                "\n ◄ Last Animation on the list."+
+                "\n"+b_sShuffle;
+    // Populate Buttons list.
+    list lButtons  = [];
+    if((integer)llLinksetDataRead("ao_"+sAnimState+"change") > 0)
+    {
+        lButtons = ["Timer",b_sShuffle];
+    }
+    else
+    {
+        lButtons = ["Select Anim","Timer"];
+    }
+    // Start dialog.
+    Dialog(kID, sPrompt, lButtons, ["◄", UPMENU, "►"], 0, iAuth, "Animation~"+sAnimState);
+}
+
+MenuTime(key kID, string sAnimState, integer iAuth)
+{
+    string sPrompt = "|====="+sAnimState+" Time=====|";
+    // load toggle buttons.
+    // set status information.
+    sPrompt +=  "\n Current "+sAnimState+" Timer:"+llLinksetDataRead("ao_"+sAnimState+"change")+
+                "\n 0 = Disabled";
+    // Populate Buttons list.
+    list lButtons = ["20","30","45","60","90","120","180"];
+    // Start dialog.
+    Dialog(kID, sPrompt, lButtons, ["Custom","Disable",UPMENU], 0, iAuth, "Time~"+sAnimState);
+}
+
+MenuChooseAnim(key kID, string sAnimState, integer iPage, integer iAuth)
+{
+    if (!iPage)
+    {
+        g_iPage = 0;
+    }
+    string sAnim = llLinksetDataRead(sAnimState);
+    string sPrompt = "\n"+sAnimState+": \""+sAnim+"\"\n";
+    g_lAnims2Choose = llListSort(llParseString2List(llLinksetDataRead("ao_"+sAnimState),[","],[]),1,TRUE);
+    list lButtons;
+    integer iEnd = llGetListLength(g_lAnims2Choose);
+    integer i;
+    while (++i<=iEnd)
+    {
+        lButtons += (string)i;
+        sPrompt += "\n"+(string)i+": "+llList2String(g_lAnims2Choose,i-1);
+    }
+    list lStaticButtons = [UPMENU];
+    if (llGetListLength(lButtons) > 11)
+    {
+        lStaticButtons = ["◄","►",UPMENU];
+        g_iNumberOfPages = llGetListLength(lButtons)/9;
+        lButtons = llList2List(lButtons,iPage*9,iPage*9+8);
+    }
+    Dialog(kID, sPrompt, lButtons, ["BACK"],iPage,iAuth,"Select~"+sAnimState);
+}
+
 MenuAdmin(key kID, integer iAuth)
 {
     string sPrompt = "|=====Adnimistration=====|";
 
-    list lButtons  = ["Reset AO"];
+    list lButtons  = ["Reset AO","HUD Options"];
     list lUtilityButtons = [];// this is only here so we can set ultities to respect online and offline mode.
 
-    if( (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_online")) // we only need certain buttons when they are nesissary.
+    if( (integer)llLinksetDataRead("ao_online")) // we only need certain buttons when they are nesissary.
     {
         lUtilityButtons = ["Collar","DISCONNECT",UPMENU];
     }
@@ -179,62 +234,34 @@ MenuAdmin(key kID, integer iAuth)
 
 Menu_Confirm(key kID, integer iAuth, string sMenu, string sQuery)
 {
-    //llOwnerSay("Prompting confirmation!");
     string sPrompt = "\n ao Confirmation Menu\n\n"+sQuery;
-    string sQMenu = "Menu-Q"+sMenu;
-    list lButtons = ["Yes","No"];
-    Dialog(kID, sPrompt, lButtons, [], 0, iAuth, sQMenu);
+    string sQMenu = "Menu~Q"+sMenu;
+    list lButtons = ["Yes"];
+    Dialog(kID, sPrompt, lButtons, ["No"], 0, iAuth, sQMenu);
+}
+
+
+Notify(string sMsg,key kID)
+{
+    llInstantMessage(kID,sMsg);
+    if(kID != llGetOwner())
+    {
+        llOwnerSay(sMsg);
+    }
+    sMsg ="";
+    kID = "";
 }
 
 default
 {
-    state_entry()
+    link_message(integer iLink, integer iNum, string sMsg, key kID)
     {
-        if(llGetAttached())
+        if(iNum == DIALOG_RESPONSE)
         {
-            llLinksetDataWrite("auth_wearer",llGetOwner());
-            if(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_menu") != "")
-            {
-                llOwnerSay("Clearing old menues!");
-                llLinksetDataDelete(llToLower(llLinksetDataRead("addon_name"))+"_menu");
-            }
-            llSetTimerEvent(60);
-        }
-    }
-
-    timer()
-    {
-        // clear active menues weather from this script or another one.
-        list g_lMenuIDs = llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_menu"),[","],[]);
-        if(llGetListLength(g_lMenuIDs))
-        {
-            if(llGetUnixTime() > llList2Integer(g_lMenuIDs,3))
-            {
-                llListenRemove(llList2Integer(g_lMenuIDs,2));
-                llLinksetDataDelete(llToLower(llLinksetDataRead("addon_name"))+"_menu");
-                g_lCustomCards = [];
-            }
-        }
-        g_lMenuIDs=[];
-    }
-
-    listen(integer iChannel, string sName, key kID, string sMsg)
-    {
-        if (~llListFindList( llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_menu"),[","],[]),[(string)kID,(string)iChannel]))
-        {
-            list g_lMenuIDs = llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_menu"),[","],[]);
-            if(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_menu") == "")
-            {
-                llOwnerSay("Error Menu is Blank when it should not be!");
-                g_lMenuIDs = [];
-            }
-            integer iMenuIndex = llListFindList(g_lMenuIDs, [(string)kID]);
-            integer iAuth = llList2Integer(g_lMenuIDs,iMenuIndex+5);
-            string sMenu = llList2String(g_lMenuIDs, iMenuIndex+4);
-            llListenRemove(llList2Integer(g_lMenuIDs,iMenuIndex+2));
-            g_lMenuIDs = llDeleteSubList(g_lMenuIDs,iMenuIndex, iMenuIndex+4);
-            llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_menu",llDumpList2String(g_lMenuIDs,","));
-            g_lMenuIDs=[];
+            list lPar = llParseString2List(sMsg,[","],[]);
+            integer iAuth = llList2Integer(lPar,0);
+            string sMenu = llList2String(lPar,1);
+            sMsg = llList2String(lPar,2);
             integer iRespring = TRUE;
             if (sMenu == "Menu~Main")
             {
@@ -246,24 +273,28 @@ default
                 else if (sMsg == "Anims")
                 {
                     iRespring = FALSE;
-                    llMessageLinked(LINK_SET,iAuth,"MenuAnims",kID);
+                    MenuMultiAnims(kID, 0, iAuth);
                 }
                 else if (sMsg == "Load")
                 {
                     MenuLoad(kID, 0, iAuth);
                     iRespring = FALSE;
                 }
-                else if(sMsg == b_sSitAO)
-                {
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_sitctl",(string)(!(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitctl")));
-                }
                 else if (sMsg == b_sPower)
                 {
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_power",(string)(!(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_power")));
+                    llLinksetDataWrite("ao_power",(string)(!(integer)llLinksetDataRead("ao_power")));
+                }
+                else if(sMsg == b_sSitAO)
+                {
+                    llLinksetDataWrite("ao_sitctl",(string)(!(integer)llLinksetDataRead("ao_sitctl")));
                 }
                 else if( sMsg == b_sSitAny)
                 {
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere",(string)(!(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere")));
+                    llLinksetDataWrite("ao_sitanywhere",(string)(!(integer)llLinksetDataRead("ao_sitanywhere")));
+                }
+                else if( sMsg == b_sTyping)
+                {
+                    llLinksetDataWrite("ao_typingctl",(string)(!(integer)llLinksetDataRead("ao_typingctl")));
                 }
                 if(iRespring)
                 {
@@ -279,27 +310,27 @@ default
                 }
                 if (llGetInventoryType(sMsg) == INVENTORY_NOTECARD)
                 {
-                    if(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_card") != sMsg) // there is no point in expending the time to read whats already in memory.
+                    if(llLinksetDataRead("ao_card") != sMsg) // there is no point in expending the time to read whats already in memory.
                     {
                         if(llGetInventoryType(sMsg) == INVENTORY_NOTECARD)
                         {
-                            llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_loaded",(string)FALSE);
-                            llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_card",sMsg);
+                            llLinksetDataWrite("ao_loaded",(string)FALSE);
+                            llLinksetDataWrite("ao_card",sMsg);
                         }
                         else if (kID != "" && kID != NULL_KEY)
                         {
-                            llInstantMessage(kID,"that card does not seem to exist!");
+                            Notify("that card does not seem to exist!",kID);
                             MenuLoad(kID,g_iPage,iAuth);
                         }
                     }
                     else if (kID != "" && kID != NULL_KEY)
                     {
-                        llInstantMessage(kID,"Card is already loaded try a different one or clear memory");
+                        Notify("Card is already loaded try a different one or clear memory",kID);
                         MenuLoad(kID,g_iPage,iAuth);
                     }
                     return;
                 }
-                else if ((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_loaded")&& sMsg == "BACK")
+                else if ((integer)llLinksetDataRead("ao_loaded")&& sMsg == "BACK")
                 {
                     Menu(kID,iAuth);
                     g_lCustomCards = [];
@@ -319,15 +350,184 @@ default
                         g_iPage = g_iNumberOfPages;
                     }
                 }
-                else if (!(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_loaded"))
+                else if (!(integer)llLinksetDataRead("ao_loaded"))
                 {
-                     llOwnerSay("Please load an animation set first.");
+                     Notify("Please load an animation set first.",kID);
                 }
                 else
                 {
-                    llOwnerSay("Could not find animation set: "+sMsg);
+                    Notify("Could not find animation set: "+sMsg,kID);
                 }
                 MenuLoad(kID,g_iPage,iAuth);
+            }
+            else if(sMenu == "Menu~MultiAnims")
+            {
+                if (sMsg == UPMENU)
+                {
+                    iRespring = FALSE;
+                    Menu(kID,iAuth);
+                }
+                else if(llListFindList(g_lAnimStates,[sMsg]) != -1)
+                {
+                    iRespring = FALSE;
+                    MenuAnimation(kID, sMsg, iAuth);
+                }
+                else if (sMsg == "►")
+                {
+                    if (++g_iPage > g_iNumberOfPages)
+                    {
+                        g_iPage = 0;
+                    }
+                }
+                else if (sMsg == "◄")
+                {
+                    if (--g_iPage < 0)
+                    {
+                        g_iPage = g_iNumberOfPages;
+                    }
+                }
+                if(iRespring)
+                {
+                    MenuMultiAnims(kID, 0, iAuth);
+                }
+            }
+            else if(~llSubStringIndex(sMenu,"Animation"))
+            {
+                string sAnimState = llList2String(llParseString2List(sMenu,["~"],[]),1);
+                if (sMsg == UPMENU)
+                {
+                    iRespring = FALSE;
+                    MenuMultiAnims(kID, 0, iAuth);
+                }
+                else if (sMsg == "Select Anim")
+                {
+                    iRespring = FALSE;
+                    MenuChooseAnim(kID, sAnimState, 0, iAuth);
+                }
+                else if (sMsg == "Timer")
+                {
+                    iRespring = FALSE;
+                    MenuTime(kID, sAnimState, iAuth);
+                }
+                else if (sMsg == b_sShuffle)
+                {
+                    llLinksetDataWrite("ao_"+sAnimState+"rand",(string)(!(integer)llLinksetDataRead("ao_"+sAnimState+"rand")));
+                }
+                else if (sMsg == "►")
+                {
+                    list lAnims = llParseString2List(llLinksetDataRead("ao_"+sAnimState),[","],[]);
+                    integer iIndex = llListFindList(lAnims,[llLinksetDataRead(sAnimState)]);
+                    if(iIndex > llGetListLength(lAnims)-1)
+                    {
+                        iIndex = 0;
+                    }
+                    string sAnim = llList2String(lAnims,iIndex+1);
+                    Notify("Setting Animation to "+sAnim+" for State "+sAnimState, kID);
+                    llLinksetDataWrite(sAnimState,sAnim);
+                }
+                else if (sMsg == "◄")
+                {
+                    list lAnims = llParseString2List(llLinksetDataRead("ao_"+sAnimState),[","],[]);
+                    integer iIndex = llListFindList(lAnims,[llLinksetDataRead(sAnimState)]);
+                    if(iIndex < 0)
+                    {
+                        iIndex = llGetListLength(lAnims)-1;
+                    }
+                    string sAnim = llList2String(lAnims,iIndex-1);
+                    Notify("Setting Animation to "+sAnim+" for State "+sAnimState, kID);
+                    llLinksetDataWrite(sAnimState,sAnim);
+                }
+                if(iRespring)
+                {
+                    MenuAnimation(kID, sAnimState, iAuth);
+                }
+            }
+            else if( ~llSubStringIndex(sMenu,"Time"))
+            {
+                string sAnimState = llList2String(llParseString2List(sMenu,["~"],[]),1);
+                if (sMsg == UPMENU)
+                {
+                    MenuAnimation(kID, sAnimState, iAuth);
+                    iRespring = FALSE;
+                }
+                else if(sMsg == "Disable")
+                {
+                    if((integer)llLinksetDataRead("ao_"+sAnimState+"change"))
+                    {
+                        llLinksetDataWrite("ao_"+sAnimState+"change",(string)0);
+                    }
+                    else
+                    {
+                        llLinksetDataWrite("ao_"+sAnimState+"change",(string)120);
+                    }
+                }
+                else if(sMsg == "Custom")
+                {
+                    iRespring = FALSE;
+                    string sPrompt = "|=====Set Time=====|\nSet a custom timer any thing greater than 0";
+                    Dialog(kID, sPrompt, ["!!llTextBox!!"], [UPMENU], 0, iAuth, sMenu);
+                }
+                else
+                {
+                    if((integer)sMsg)
+                    {
+                        llLinksetDataWrite("ao_"+sAnimState+"change",sMsg);
+                    }
+                    else if((integer)llLinksetDataRead("ao_"+sAnimState+"change"))
+                    {
+                        llLinksetDataWrite("ao_"+sAnimState+"change",(string)0);
+                    }
+                    else
+                    {
+                        llLinksetDataWrite("ao_"+sAnimState+"change",(string)120);
+                    }
+                }
+                if(iRespring)
+                {
+                    MenuTime(kID, sAnimState, iAuth);
+                }
+            }
+            else if(~llSubStringIndex(sMenu,"Select"))
+            {
+                llOwnerSay("[Selecting animation]"+llList2String(g_lAnims2Choose,((integer)sMsg-1)));
+                string sAnimState = llList2String(llParseString2List(sMenu,["~"],[]),1);
+                if (sMsg == UPMENU)
+                {
+                    MenuAnimation(kID, sAnimState, iAuth);
+                    iRespring = FALSE;
+                }
+                else if (sMsg == "►")
+                {
+                    if (++g_iPage > g_iNumberOfPages)
+                    {
+                        g_iPage = 0;
+                    }
+                }
+                else if (sMsg == "◄")
+                {
+                    if (--g_iPage < 0)
+                    {
+                        g_iPage = g_iNumberOfPages;
+                    }
+                }
+                else if(llListFindList(llParseString2List(llLinksetDataRead("ao_"+sAnimState),[","],[]),[llList2String(g_lAnims2Choose,(integer)sMsg)]) != -1)
+                {
+                    string sAnim = llList2String(g_lAnims2Choose,((integer)sMsg-1));
+                    if(llGetInventoryType(sAnim) == INVENTORY_ANIMATION)
+                    {
+                        Notify("Setting animation "+sAnim+" to State "+sAnimState,kID);
+                        llLinksetDataWrite(sAnimState,sAnim);
+                    }
+                    else
+                    {
+                        Notify("Animation does not exist in inventory!",kID);
+                    }
+                    g_lAnims2Choose = [];
+                }
+                if(iRespring)
+                {
+                    MenuChooseAnim(kID, sAnimState, g_iPage, iAuth);
+                }
             }
             else if( sMenu == "Menu~Admin")
             {
@@ -341,23 +541,10 @@ default
                     iRespring = FALSE;
                     Menu_Confirm(kID,iAuth,"mem","Would you like to clear LinksetData?");
                 }
-                else if (sMsg == "Print Memory")
+                else if( sMsg == "HUD Options")
                 {
-                    llOwnerSay("Requestiong Memory");
-                    llMessageLinked(LINK_SET,0,"memory_print",(string)kID);
-                }
-                else if (sMsg == "Print LSD")
-                {
-                    list lLSD = llListSort(llLinksetDataListKeys(0,llLinksetDataCountKeys()-1),1,TRUE);
-                    integer iIndex = 0;
-                    string sKey;
-                    for(iIndex = 0; iIndex < llGetListLength(lLSD); iIndex++)
-                    {
-                        sKey = llList2String(lLSD,iIndex);
-                        llInstantMessage(kID,sKey+"="+llLinksetDataRead(sKey));
-                    }
-                    sKey="";
-                    lLSD = [];
+                    iRespring = FALSE;
+                    llMessageLinked(LINK_SET, MENU_REQUEST, (string)iAuth+"|MenuOptions",kID);
                 }
                 else if (sMsg == "Collar")
                 {
@@ -367,20 +554,20 @@ default
                 else if (sMsg == "DISCONNECT")
                 {
                     iRespring = FALSE;
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_online",(string)FALSE);
+                    llLinksetDataWrite("ao_online",(string)FALSE);
                 }
                 else if (sMsg == "CONNECT")
                 {
                     iRespring = FALSE;
                     // if the collar disconects but is available we want the user to be able to connect it if they don't wish to safe word.
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_online",(string)TRUE);
+                    llLinksetDataWrite("ao_online",(string)TRUE);
                 }
                 if(iRespring)
                 {
                     MenuAdmin(kID,iAuth);
                 }
             }
-            else if(~llSubStringIndex(sMenu,"Menu-Q"))
+            else if(~llSubStringIndex(sMenu,"Menu~Q"))
             {
                 if( sMsg == "Yes")
                 {
@@ -399,32 +586,19 @@ default
                 }
             }
         }
-    }
-
-    link_message(integer iLink, integer iNum,string sMsg, key kID)
-    {
-        if (iNum <= CMD_WEARER && iNum >= CMD_OWNER)
+        else if(iNum == MENU_REQUEST)
         {
-            if(sMsg == "Menu")
+            list lPar = llParseString2List(sMsg,["|"],[]);
+            integer iAuth = llList2Integer(lPar,0);
+            string sMenu = llList2String(lPar,1);
+            if(sMenu == "MenuMain")
             {
-                Menu(kID,iNum);
+                Menu( kID, iAuth);
             }
-        }
-    }
-
-    linkset_data(integer iAction,string sName,string sVal)
-    {
-        if(iAction == LINKSETDATA_UPDATE)
-        {
-            if(sName == llToLower(llLinksetDataRead("addon_name"))+"_loaded" && (integer)sVal) // bring up this menu from any other script.
+            if(sMenu == "MenuAdmin")
             {
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_power",(string)TRUE);
+                MenuAdmin( kID, iAuth);
             }
-        }
-        else if(iAction == LINKSETDATA_RESET)
-        {
-            // should alway reset the scripts if LSD changes to make sure settings are reloaded or updated.
-            llResetScript();
         }
     }
 }
