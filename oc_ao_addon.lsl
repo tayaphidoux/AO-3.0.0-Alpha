@@ -14,6 +14,7 @@ integer API_CHANNEL = 0x60b97b5e;
 
 //list g_lCollars;
 string g_sAddon = "ao";
+string g_sVersion = "3.0.2";
 
 //integer CMD_ZERO            = 0;
 integer CMD_OWNER           = 500;
@@ -49,6 +50,7 @@ integer LM_SETTING_RESPONSE = 2002; //the settings script sends responses on thi
 //integer DIALOG          = -9000;
 //integer DIALOG_RESPONSE = -9001;
 //integer DIALOG_TIMEOUT  = -9002;
+integer MENU_REQUEST    = -9003;
 
 /*
  * Since Release Candidate 1, Addons will not receive all link messages without prior opt-in.
@@ -59,8 +61,6 @@ integer LM_SETTING_RESPONSE = 2002; //the settings script sends responses on thi
  */
 list g_lOptedLM     = [];
 
-
-string g_sVersion = "3.0.0";
 //integer g_iStandTime = 120; // Default Stand timer.
 // State related Animation List.
 string g_sCard = "Default";
@@ -78,12 +78,14 @@ UserCommand(integer iNum, string sStr, key kID)
     }
     if (iNum == CMD_OWNER && llToLower(sStr) == "runaway")
     {
+        llLinksetDataReset();
         return;
     }
     if (llToLower(sStr) == llToLower(g_sAddon) || llToLower(sStr) == "menu "+llToLower(g_sAddon))
     {
         //Menu(kID, iNum);
-        llMessageLinked(LINK_SET,iNum,"Menu",kID);
+        //llMessageLinked(LINK_SET,iNum,"Menu",kID);
+        llMessageLinked(LINK_SET, MENU_REQUEST, (string)iNum+"|MenuMain", kID);
     }
     else
     {
@@ -92,53 +94,51 @@ UserCommand(integer iNum, string sStr, key kID)
         string sVal = llList2String(lCommands,2);
         if ( sToken == "power")
         {
-            if(llLinksetDataRead(llToLower(g_sAddon)+"_card") == "")
+            if(llLinksetDataRead("ao_card") == "")
             {
                 //g_iDefault = TRUE;
                 UserCommand(iNum,g_sAddon+" load "+g_sCard, kID);
             }
             else
             {
-                llLinksetDataWrite(llToLower(g_sAddon)+"_power",(string)(!(integer)llLinksetDataRead(llToLower(g_sAddon)+"_power")));
+                llLinksetDataWrite("ao_power",(string)(!(integer)llLinksetDataRead("ao_power")));
             }
         }
         else if ( sToken == "on")
         {
-            if(llLinksetDataRead(llToLower(g_sAddon)+"_card") == "")
+            if(llLinksetDataRead("ao_card") == "")
             {
                 //g_iDefault = TRUE;
                 UserCommand(iNum,g_sAddon+" load "+g_sCard, kID);
             }
             else
             {
-                llLinksetDataWrite(llToLower(g_sAddon)+"_power",(string)TRUE);
+                llLinksetDataWrite("ao_power",(string)TRUE);
             }
         }
         else if ( sToken == "off")
         {
-            llLinksetDataWrite(llToLower(g_sAddon)+"_power",(string)FALSE);
+            llLinksetDataWrite("ao_power",(string)FALSE);
         }
         else if ( sToken == "load")
         {
-            if(llLinksetDataRead(llToLower(g_sAddon)+"_card") != sVal)
+            if(llLinksetDataRead("ao_card") != sVal)
             {
                 if(llGetInventoryType(sVal) == INVENTORY_NOTECARD)
                 {
-                    llLinksetDataWrite(llToLower(g_sAddon)+"_loaded",(string)FALSE);
-                    llLinksetDataWrite(llToLower(g_sAddon)+"_card",sVal);
+                    llLinksetDataWrite("ao_loaded",(string)FALSE);
+                    llLinksetDataWrite("ao_card",sVal);
                 }
                 else if (kID != "" && kID != NULL_KEY)
                 {
                     llInstantMessage(kID,"that card does not seem to exist!");
-                    //MenuLoad(kID,g_iPage,iNum);
-                    llMessageLinked(LINK_SET,iNum,"MenuLoad",kID);
+                    llMessageLinked(LINK_SET, MENU_REQUEST, (string)iNum+"|MenuLoad",kID);
                 }
             }
             else if (kID != "" && kID != NULL_KEY)
             {
                 llInstantMessage(kID,"Card is already loaded try a different one or clear memory");
-                //MenuLoad(kID,g_iPage,iNum);
-                llMessageLinked(LINK_SET,iNum,"MenuLoad",kID);
+                llMessageLinked(LINK_SET, MENU_REQUEST, (string)iNum+"|MenuLoad", kID);
             }
         }
         else if( sToken == "reset")
@@ -148,11 +148,11 @@ UserCommand(integer iNum, string sStr, key kID)
         }
         else if( sToken == "connect")
         {
-            llLinksetDataWrite(llToLower(g_sAddon)+"_online",(string)TRUE);
+            llLinksetDataWrite("ao_online",(string)TRUE);
         }
         else if( sToken == "disconnect")
         {
-            llLinksetDataWrite(llToLower(g_sAddon)+"_online",(string)FALSE);
+            llLinksetDataWrite("ao_online",(string)FALSE);
         }
         lCommands = [];
         sToken = "";
@@ -191,16 +191,16 @@ Link(string packet, integer iNum, string sStr, key kID)
 goOnline()
 {
     llLinksetDataWrite("collar_uuid",(string)NULL_KEY);
-    if((integer)llLinksetDataRead(llToLower(g_sAddon)+"_listen"))
+    if((integer)llLinksetDataRead("ao_listen"))
     {
-        llListenRemove((integer)llLinksetDataRead(llToLower(g_sAddon)+"_listen"));
+        llListenRemove((integer)llLinksetDataRead("ao_listen"));
     }
     API_CHANNEL = ((integer)("0x" + llGetSubString((string)llGetOwner(), 0, 8))) + 0xf6eb - 0xd2;
-    llLinksetDataWrite(llToLower(g_sAddon)+"_listen",(string)llListen(API_CHANNEL, "", "", ""));
+    llLinksetDataWrite("ao_listen",(string)llListen(API_CHANNEL, "", "", ""));
     Link("online", 0, "", llGetOwner()); // This is the signal to initiate communication between the addon and the collar
     llSetTimerEvent(10);
-    llLinksetDataWrite(llToLower(g_sAddon)+"_LMLastRecv",(string)llGetUnixTime());
-    llLinksetDataWrite(llToLower(g_sAddon)+"_LMLastSent",(string)llGetUnixTime());
+    llLinksetDataWrite("ao_LMLastRecv",(string)llGetUnixTime());
+    llLinksetDataWrite("ao_LMLastSent",(string)llGetUnixTime());
 }
 
 check_settings(string sToken, string sDefaulVal)
@@ -219,17 +219,17 @@ default // in this state we check if the collar is availble and we can connect.
 {
     state_entry()
     {
-        llLinksetDataWrite(llToLower(g_sAddon)+"_ver",g_sVersion); //may be needed for update systems.
+        llLinksetDataWrite("ao_ver",g_sVersion); //may be needed for update systems.
         llLinksetDataWrite("addon_name",g_sAddon); // needed for other scripts.
         llLinksetDataWrite("auth_wearer",(string)llGetOwner()); // could be usefull.
-        check_settings(llToLower(g_sAddon)+"_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1))); // sets up prefix for stand alone mode.
-        check_settings(llToLower(g_sAddon)+"_online",(string)TRUE); // we want to default to collar connection.
+        check_settings("ao_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1))); // sets up prefix for stand alone mode.
+        check_settings("ao_online",(string)TRUE); // we want to default to collar connection.
         llOwnerSay("Initializing Please Wait!");
         if(llGetAttached())
         {
-            if((integer)llLinksetDataRead(llToLower(g_sAddon)+"_online"))
+            if((integer)llLinksetDataRead("ao_online"))
             {
-                llLinksetDataWrite(llToLower(g_sAddon)+"_rezzed",(string)TRUE);
+                llLinksetDataWrite("ao_rezzed",(string)TRUE);
                 //g_iJustRezzed = TRUE;
                 llSetTimerEvent(30);
                 goOnline();
@@ -251,7 +251,7 @@ default // in this state we check if the collar is availble and we can connect.
             else
             {
                 llLinksetDataWrite("auth_wearer",(string)llGetOwner());
-                check_settings(llToLower(g_sAddon)+"_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
+                check_settings("ao_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
             }
         }
     }
@@ -267,7 +267,7 @@ default // in this state we check if the collar is availble and we can connect.
         if (sPacketType == "approved")
         {
             // if we get responce disconnect then set ao to online mode.
-            llListenRemove((integer)llLinksetDataRead(llToLower(g_sAddon)+"_listen"));
+            llListenRemove((integer)llLinksetDataRead("ao_listen"));
             Link("offline", 0, "", llGetOwnerKey((key)llLinksetDataRead("collar_uuid")));
             llLinksetDataDelete("collar_uuid");
             llLinksetDataDelete("collar_name");
@@ -285,7 +285,7 @@ default // in this state we check if the collar is availble and we can connect.
     timer()
     {
         llSetTimerEvent(0);
-        llListenRemove((integer)llLinksetDataRead(llToLower(g_sAddon)+"_listen"));
+        llListenRemove((integer)llLinksetDataRead("ao_listen"));
         state offline;
     }
 
@@ -304,7 +304,7 @@ state online
     {
         llLinksetDataWrite("auth_wearer",(string)llGetOwner());
         llLinksetDataWrite("addon_name",g_sAddon);
-        check_settings(llToLower(g_sAddon)+"_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
+        check_settings("ao_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
         goOnline();
         llSetTimerEvent(1);
         llOwnerSay(" Connected to collar satus online");
@@ -314,7 +314,7 @@ state online
         if(kID != NULL_KEY)
         {
             llLinksetDataWrite("auth_wearer",(string)llGetOwner());
-            check_settings(llToLower(g_sAddon)+"_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
+            check_settings("ao_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
         }
     }
 
@@ -333,13 +333,13 @@ state online
 
     timer()
     {
-        if (llGetUnixTime() >= ((integer)llLinksetDataRead(llToLower(g_sAddon)+"_LMLastSent") + 30))
+        if (llGetUnixTime() >= ((integer)llLinksetDataRead("ao_LMLastSent") + 30))
         {
-            llLinksetDataWrite(llToLower(g_sAddon)+"_LMLastSent",(string)llGetUnixTime());
+            llLinksetDataWrite("ao_LMLastSent",(string)llGetUnixTime());
             Link("ping", 0, "", (key)llLinksetDataRead("collar_uuid"));
             Link("from_addon", LM_SETTING_REQUEST, "ao_card", "");
         }
-        if (llGetUnixTime() > ((integer)llLinksetDataRead(llToLower(g_sAddon)+"_LMLastRecv") + (5 * 60)) && llLinksetDataRead("collar_uuid") != NULL_KEY)
+        if (llGetUnixTime() > ((integer)llLinksetDataRead("ao_LMLastRecv") + (5 * 60)) && llLinksetDataRead("collar_uuid") != NULL_KEY)
         {
             state default;
         }
@@ -373,17 +373,17 @@ state online
             if (sPacketType == "approved")
             {
                 // This signal, indicates the collar has approved the addon and that communication requests will be responded to if the requests are valid collar LMs.
-                if((integer)llLinksetDataRead(llToLower(g_sAddon)+"_rezzed"))
+                if((integer)llLinksetDataRead("ao_rezzed"))
                 {
-                    llLinksetDataDelete(llToLower(g_sAddon)+"_rezzed");
+                    llLinksetDataDelete("ao_rezzed");
                 }
                 llLinksetDataWrite("collar_uuid",(string)kID);
                 llLinksetDataWrite("collar_name",(string)sName);
-                llListenRemove((integer)llLinksetDataRead(llToLower(g_sAddon)+"_listen"));
-                llLinksetDataWrite(llToLower(g_sAddon)+"_listen",(string)llListen(API_CHANNEL, sName, kID, ""));
-                llLinksetDataWrite(llToLower(g_sAddon)+"_LMLastRecv",(string)llGetUnixTime());
+                llListenRemove((integer)llLinksetDataRead("ao_listen"));
+                llLinksetDataWrite("ao_listen",(string)llListen(API_CHANNEL, sName, kID, ""));
+                llLinksetDataWrite("ao_LMLastRecv",(string)llGetUnixTime());
                 Link("from_addon", LM_SETTING_REQUEST, "ALL", "");
-                llLinksetDataWrite(llToLower(g_sAddon)+"_LMLastSent",(string)llGetUnixTime());
+                llLinksetDataWrite("ao_LMLastSent",(string)llGetUnixTime());
                 llSetTimerEvent(10);// move the timer here in order to wait for collar responce.
             }
         }
@@ -398,16 +398,16 @@ state online
             }
             else if (sPacketType == "pong" && (key)llLinksetDataRead("collar_uuid") == kID)
             {
-                if(llGetUnixTime() > ((integer)llLinksetDataRead(llToLower(g_sAddon)+"_LMLastRecv")+30))
+                if(llGetUnixTime() > ((integer)llLinksetDataRead("ao_LMLastRecv")+30))
                 {
-                    llLinksetDataWrite(llToLower(g_sAddon)+"_LMLastRecv",(string)llGetUnixTime());
+                    llLinksetDataWrite("ao_LMLastRecv",(string)llGetUnixTime());
                 }
             }
             else if(sPacketType == "from_collar")
             {
-                if(llGetUnixTime() > ((integer)llLinksetDataRead(llToLower(g_sAddon)+"_LMLastRecv")+30))
+                if(llGetUnixTime() > ((integer)llLinksetDataRead("ao_LMLastRecv")+30))
                 {
-                    llLinksetDataWrite(llToLower(g_sAddon)+"_LMLastRecv",(string)llGetUnixTime());
+                    llLinksetDataWrite("ao_LMLastRecv",(string)llGetUnixTime());
                 }
                 // process link message if in range of addon
                 if (llVecDist(llGetPos(), llList2Vector(llGetObjectDetails(kID, [OBJECT_POS]), 0)) <= 10.0)
@@ -427,12 +427,12 @@ state online
                         string sVal   = llList2String(lPar, 2);
                         if( sToken == "ao")
                         {
-                            if( sVar == "card" && sVal != llLinksetDataRead(llToLower(g_sAddon)+"_card"))
+                            if( sVar == "card" && sVal != llLinksetDataRead("ao_card"))
                             {
                                 if(llGetInventoryType(sVal) == INVENTORY_NOTECARD)
                                 {
-                                    llLinksetDataWrite(llToLower(g_sAddon)+"_loaded",(string)FALSE);
-                                    llLinksetDataWrite(llToLower(g_sAddon)+"_card",sVal);
+                                    llLinksetDataWrite("ao_loaded",(string)FALSE);
+                                    llLinksetDataWrite("ao_card",sVal);
                                 }
                                 else if (kID != "" && kID != NULL_KEY)
                                 {
@@ -462,7 +462,7 @@ state online
                             if(sVar == "prefix")
                             {
                                 // we can use the prefix defined by the collar.
-                                llLinksetDataWrite(llToLower(g_sAddon)+"_prefix",sVal);
+                                llLinksetDataWrite("ao_prefix",sVal);
                             }
                         }
                         lPar = [];
@@ -484,19 +484,19 @@ state online
     {
         if(iAction == LINKSETDATA_UPDATE)
         {
-            if(sName == llToLower(g_sAddon)+"_online")
+            if(sName == "ao_online")
             {
-                llListenRemove((integer)llLinksetDataRead(llToLower(g_sAddon)+"_listen"));
+                llListenRemove((integer)llLinksetDataRead("ao_listen"));
                 state default;
             }
-            else if(sName == llToLower(g_sAddon)+"_card")
+            else if(sName == "ao_card")
             {
                 Link("from_addon", LM_SETTING_SAVE, "ao_card="+sValue, "");
             }
         }
         else if(iAction == LINKSETDATA_RESET)
         {
-            llListenRemove((integer)llLinksetDataRead(llToLower(g_sAddon)+"_listen"));
+            llListenRemove((integer)llLinksetDataRead("ao_listen"));
             llResetScript();
         }
     }
@@ -508,11 +508,11 @@ state offline
     {
         llLinksetDataWrite("auth_wearer",(string)llGetOwner());
         llLinksetDataWrite("addon_name",g_sAddon);
-        check_settings(llToLower(g_sAddon)+"_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
-        llLinksetDataWrite(llToLower(g_sAddon)+"_online",(string)FALSE);
+        check_settings("ao_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
+        llLinksetDataWrite("ao_online",(string)FALSE);
         llSetTimerEvent(0);
-        llOwnerSay("ao in offline mode, you can still use /1"+llLinksetDataRead(llToLower(g_sAddon)+"_prefix")+"ao commands");
-        llLinksetDataWrite(llToLower(g_sAddon)+"_listen",(string)llListen(1,"",NULL_KEY,""));
+        llOwnerSay("ao in offline mode, you can still use /1"+llLinksetDataRead("ao_prefix")+"ao commands");
+        llLinksetDataWrite("ao_listen",(string)llListen(1,"",NULL_KEY,""));
     }
     attach(key kID)
     {
@@ -525,13 +525,13 @@ state offline
             else
             {
                 llLinksetDataWrite("auth_wearer",(string)llGetOwner());
-                check_settings(llToLower(g_sAddon)+"_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
+                check_settings("ao_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1)));
             }
         }
     }
     listen (integer iChan, string sName, key kID,string sMsg)
     {
-        if(~llSubStringIndex(llToLower(sMsg),llLinksetDataRead(llToLower(g_sAddon)+"_prefix")))
+        if(~llSubStringIndex(llToLower(sMsg),llLinksetDataRead("ao_prefix")))
         {
             // determine authorization of the user and allow access.
             sMsg = llDeleteSubString(sMsg,0,1);
@@ -558,17 +558,17 @@ state offline
     {
         if(iAction == LINKSETDATA_UPDATE)
         {
-            if(sName == llToLower(g_sAddon)+"_online")
+            if(sName == "ao_online")
             {
                 // the listen will be used for online mode if available
-                llListenRemove((integer)llLinksetDataRead(llToLower(g_sAddon)+"_listen"));
+                llListenRemove((integer)llLinksetDataRead("ao_listen"));
                 state default;
             }
         }
         else if(iAction == LINKSETDATA_RESET)
         {
             // we want to remove the listen to help clear the way for a restart.
-            llListenRemove((integer)llLinksetDataRead(llToLower(g_sAddon)+"_listen"));
+            llListenRemove((integer)llLinksetDataRead("ao_listen"));
             llResetScript();
         }
     }
