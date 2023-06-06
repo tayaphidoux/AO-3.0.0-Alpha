@@ -35,9 +35,13 @@ list g_lIgnore = [
 
 TypingAO()
 {
-    if(llLinksetDataRead("Typing") != "" && llGetInventoryType(llLinksetDataRead("Typing")) == INVENTORY_ANIMATION && (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_typingctl"))
+    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
     {
-        if(!(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_typing") || !(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_power"))
+        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
+    }
+    if(llLinksetDataRead("Typing") != "" && llGetInventoryType(llLinksetDataRead("Typing")) == INVENTORY_ANIMATION && (integer)llLinksetDataRead("ao_typingctl"))
+    {
+        if(!(integer)llLinksetDataRead("ao_typing") || !(integer)llLinksetDataRead("ao_power"))
         {
             llStopAnimation(llLinksetDataRead("Typing"));
         }
@@ -56,7 +60,11 @@ SetAO()
         swiming by replacing the fly/hover animations with swim ones so this section
         has no reason to care about a list.
     */
-    if (llGetPermissions() & PERMISSION_OVERRIDE_ANIMATIONS && (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_power") && !(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere") )
+    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
+    {
+        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
+    }
+    if ((integer)llLinksetDataRead("ao_power") && !(integer)llLinksetDataRead("ao_sitanywhere") )
     {
         integer i;
         integer iListLen = llGetListLength(g_lAnimStates);
@@ -66,7 +74,7 @@ SetAO()
         for (i = 0; i<iListLen; i++)
         {
             sAnimState = llList2String(g_lAnimStates,i);
-            if(~llListFindList(g_lSwimStates,[sAnimState]) && (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_swiming"))
+            if(~llListFindList(g_lSwimStates,[sAnimState]) && (integer)llLinksetDataRead("ao_swiming"))
             {
                 // if swimming convert the use the swim animations for these states.
                 string sSwimState = "";
@@ -106,7 +114,7 @@ SetAO()
             }
             if (llGetInventoryType(sAnim) == INVENTORY_ANIMATION && !~llListFindList(g_lIgnore,[sAnim]))
             {
-                if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitctl"))
+                if((integer)llLinksetDataRead("ao_sitctl"))
                 {
                     llResetAnimationOverride(sAnimState);
                     llSetAnimationOverride(sAnimState, sAnim);
@@ -122,7 +130,7 @@ SetAO()
             {
                 // we may have to change this up a bit but for now this will alert us if any animations are not in the ao.
 
-                if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitctl"))
+                if((integer)llLinksetDataRead("ao_sitctl"))
                 {
                     llResetAnimationOverride(sAnimState);
                 }
@@ -141,24 +149,20 @@ SetAO()
 
 StopAO()
 {
-    llSetTimerEvent(0);
-    if(llGetPermissions() & PERMISSION_OVERRIDE_ANIMATIONS && llGetPermissions() & PERMISSION_TRIGGER_ANIMATION)
+    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
     {
-        llResetAnimationOverride("ALL");
-        if(llLinksetDataRead("Typing") != "")
-        {
-            llStopAnimation(llLinksetDataRead("Typing"));
-        }
-        if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere"))
-        {
-            llStopAnimation("Sitting on Ground");
-        }
+        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
     }
-}
-
-recordMemory()
-{
-    llLinksetDataWrite("memory_"+llGetScriptName(),(string)llGetUsedMemory());
+    llSetTimerEvent(0);
+    llResetAnimationOverride("ALL");
+    if(llLinksetDataRead("Typing") != "")
+    {
+        llStopAnimation(llLinksetDataRead("Typing"));
+    }
+    if((integer)llLinksetDataRead("ao_sitanywhere"))
+    {
+        llStopAnimation("Sitting on Ground");
+    }
 }
 
 check_settings(string sToken, string sDefaulVal)
@@ -175,14 +179,19 @@ check_settings(string sToken, string sDefaulVal)
 
 gsitAO()
 {
-    if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere"))
+    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
+    {
+        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
+    }
+    llResetAnimationOverride("ALL");
+    if((integer)llLinksetDataRead("ao_sitanywhere"))
     {
         llOwnerSay("Starting animation:"+llLinksetDataRead("Sitting on Ground"));
         llStartAnimation(llLinksetDataRead("Sitting on Ground"));
     }
     else
     {
-        list lGSit = llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_Sitting on Ground"),[","],[]);
+        list lGSit = llParseString2List(llLinksetDataRead("ao_Sitting on Ground"),[","],[]);
         integer iIndex;
         for(iIndex = 0; iIndex < (llGetListLength(lGSit)-1); iIndex++)
         {
@@ -198,82 +207,57 @@ default
 {
     state_entry()
     {
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_wingschange",(string)120);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_wingsrand",(string)TRUE);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_standchange",(string)120);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_standrand",(string)TRUE);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere",(string)FALSE);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_sitctl",(string)FALSE);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_sitchange",(string)120);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_sitrand",(string)FALSE);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_gsitchange",(string)120);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_gsitrand",(string)FALSE);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_walkchange",(string)120);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_walkrand",(string)TRUE);
-        check_settings(llToLower(llLinksetDataRead("addon_name"))+"_typingctl",(string)TRUE);
+        check_settings("ao_sitctl",(string)FALSE);
+        check_settings("ao_typingctl",(string)TRUE);
         if(llGetAttached())
         {
-            if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_power"))
+            if((integer)llLinksetDataRead("ao_power"))
             {
-                if(llGetPermissions() & PERMISSION_OVERRIDE_ANIMATIONS && llGetPermissions() & PERMISSION_TRIGGER_ANIMATION)
-                {
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_animstate",llGetAnimation(llGetOwner()));
-                    SetAO();
-                    gsitAO();
-                }
-                else
-                {
-                    llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
-                }
+                llLinksetDataWrite("ao_animstate",llGetAnimation(llGetOwner()));
+                llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
+                gsitAO();
+                SetAO();
             }
-            if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_standchange"))
+            if((integer)llLinksetDataRead("ao_standchange"))
             {
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_standtimer",(string)(llGetUnixTime()+(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_standchange")));
+                llLinksetDataWrite("ao_standtimer",(string)(llGetUnixTime()+(integer)llLinksetDataRead("ao_standchange")));
             }
         }
-        recordMemory();
     }
     attach(key kID)
     {
         if(kID != NULL_KEY)
         {
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_wingschange",(string)120);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_wingsrand",(string)TRUE);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_standchange",(string)120);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_standrand",(string)TRUE);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere",(string)FALSE);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_sitctl",(string)FALSE);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_sitchange",(string)120);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_sitrand",(string)FALSE);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_gsitchange",(string)120);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_gsitrand",(string)FALSE);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_walkchange",(string)120);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_walkrand",(string)TRUE);
-            check_settings(llToLower(llLinksetDataRead("addon_name"))+"_typingctl",(string)TRUE);
-            if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_power"))
+            check_settings("ao_wingschange",(string)120);
+            check_settings("ao_wingsrand",(string)TRUE);
+            check_settings("ao_standchange",(string)120);
+            check_settings("ao_standrand",(string)TRUE);
+            check_settings("ao_sitanywhere",(string)FALSE);
+            check_settings("ao_sitctl",(string)FALSE);
+            check_settings("ao_sitchange",(string)120);
+            check_settings("ao_sitrand",(string)FALSE);
+            check_settings("ao_gsitchange",(string)120);
+            check_settings("ao_gsitrand",(string)FALSE);
+            check_settings("ao_walkchange",(string)120);
+            check_settings("ao_walkrand",(string)TRUE);
+            check_settings("ao_typingctl",(string)TRUE);
+            if((integer)llLinksetDataRead("ao_power"))
             {
-                llSetTimerEvent(1);
-                if((llGetPermissions() & PERMISSION_OVERRIDE_ANIMATIONS) && (llGetPermissions() & PERMISSION_TRIGGER_ANIMATION))
-                {
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_animstate",llGetAnimation(llGetOwner()));
-                    SetAO();
-                    gsitAO();
-                }
-                else
-                {
-                    llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
-                }
+                llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
+                llLinksetDataWrite("ao_animstate",llGetAnimation(llGetOwner()));
+                gsitAO();
+                SetAO();
             }
-            recordMemory();
         }
         else
         {
             // Turn off the ao when not worn.
-            if(llGetPermissions() & PERMISSION_OVERRIDE_ANIMATIONS && llGetPermissions() & PERMISSION_TRIGGER_ANIMATION)
+            if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
             {
-                llOwnerSay("Detaching so stoping animations!");
-                //llResetAnimationOverride("ALL"); - wish it worked this way
+                llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
             }
+            llOwnerSay("Detaching so stoping animations!");
+            llResetAnimationOverride("ALL");
         }
     }
 
@@ -281,7 +265,6 @@ default
     {
         if(iPerm & PERMISSION_OVERRIDE_ANIMATIONS)
         {
-            SetAO();
         }
     }
 
@@ -289,88 +272,100 @@ default
     {
         if( iAction == LINKSETDATA_UPDATE)
         {
-            if(sName == "memory_ping")
-            {
-                recordMemory();
-            }
-            if(sName == llToLower(llLinksetDataRead("addon_name"))+"_power")
+            if(sName == "ao_power")
             {
                 if((integer)sValue)
                 {
-                    llRequestPermissions(llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
+                    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
+                    {
+                        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
+                    }
                     llOwnerSay("Powering AO on!");
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_animstate",llGetAnimation(llGetOwner()));
+                    llLinksetDataWrite("ao_animstate",llGetAnimation(llGetOwner()));
+                    SetAO();
                 }
                 else
                 {
-                    if(llGetPermissions()&PERMISSION_OVERRIDE_ANIMATIONS)
-                    {
-                        llOwnerSay("Power Removing Animations!");
-                        StopAO();
-                    }
+                    llOwnerSay("Power Removing Animations!");
+                    StopAO();
                 }
             }
-            if((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_power"))
+            if((integer)llLinksetDataRead("ao_power"))
             {
-                if(llListFindList(g_lAnimStates,[sName]) != -1 && sValue != "" && !(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere"))
+                if(llListFindList(g_lAnimStates,[sName]) != -1 && sValue != "" && !(integer)llLinksetDataRead("ao_sitanywhere"))
                 {
+                    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
+                    {
+                        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
+                    }
                     llResetAnimationOverride(sName);
                     llSleep(0.1);
                     llSetAnimationOverride(sName,sValue);
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere")
+                else if(sName == "ao_sitanywhere")
                 {
                     gsitAO();
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_swiming")
+                else if(sName == "ao_swiming")
                 {
                     SetAO();
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_standchange" && (integer)sValue)
+                else if(sName == "ao_standchange" && (integer)sValue)
                 {
                     if((integer)sValue < 0)
                     {
                         sValue = "0";
                     }
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_standtimer",(string)(llGetUnixTime()+(integer)sValue));
+                    llLinksetDataWrite("ao_standtimer",(string)(llGetUnixTime()+(integer)sValue));
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_sitctl" && !(integer)sValue)
+                else if(sName == "ao_sitctl")
                 {
-                    llResetAnimationOverride("Sitting");
+                    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
+                    {
+                        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
+                    }
+                    if((integer)sValue)
+                    {
+                        SetAO();
+                    }
+                    else
+                    {
+                        llResetAnimationOverride("Sitting");
+                    }
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_walkchange" && (integer)sValue)
+                else if(sName == "ao_walkchange" && (integer)sValue)
                 {
                     if((integer)sValue < 0)
                     {
                         sValue = "0";
                     }
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_walktimer",(string)(llGetUnixTime()+(integer)sValue));
+                    llLinksetDataWrite("ao_walktimer",(string)(llGetUnixTime()+(integer)sValue));
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_sitchange" && (integer)sValue)
+                else if(sName == "ao_sitchange" && (integer)sValue)
                 {
                     if((integer)sValue < 0)
                     {
                         sValue = "0";
                     }
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_sittimer",(string)(llGetUnixTime()+(integer)sValue));
+                    llLinksetDataWrite("ao_sittimer",(string)(llGetUnixTime()+(integer)sValue));
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_gsitchange" && (integer)sValue)
+                else if(sName == "ao_gsitchange" && (integer)sValue)
                 {
                     if((integer)sValue < 0)
                     {
                         sValue = "0";
                     }
-                    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_gsittimer",(string)(llGetUnixTime()+(integer)sValue));
+                    llLinksetDataWrite("ao_gsittimer",(string)(llGetUnixTime()+(integer)sValue));
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_loaded" && (integer)sValue)
+                else if(sName == "ao_loaded" && (integer)sValue)
                 {
                     SetAO();
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere")
+                else if(sName == "ao_sitanywhere")
                 {
                     SetAO();
                 }
-                else if(sName == llToLower(llLinksetDataRead("addon_name"))+"_typing")
+                else if(sName == "ao_typing")
                 {
                     TypingAO();
                 }
@@ -379,10 +374,7 @@ default
         else if( iAction == LINKSETDATA_RESET)
         {
             llOwnerSay("Data reset so clearing AO");
-            if(llGetPermissions()&PERMISSION_OVERRIDE_ANIMATIONS)
-            {
-                StopAO();
-            }
+            StopAO();
         }
     }
 }
