@@ -33,31 +33,68 @@ float g_fGap = 0.001; // This is the space between buttons
 float g_Yoff = 0.002; // space between buttons and screen top/bottom border
 float g_Zoff = 0.04; // space between buttons and screen left/right border
 
-list g_lButtons ; // buttons names for Order menu
-//list g_lPrimOrder = [0,1,2,3,4]; // -- List must always start with '0','1'
+list g_lButtons; // buttons names for Order menu
+list g_lPrimOrder = [0,1,2,3,4]; // -- List must always start with '0','1'
 // -- 0:Spacer, 1:Root, 2:Power, 3:Sit Anywhere, 4:Menu
 // -- Spacer serves to even up the list with actual link numbers
 
-//integer g_iLayout = 1;
-//integer g_iHidden = FALSE;
-//integer g_iPosition = 69;
-//integer g_iOldPos;
-
+integer g_iLayout = 1;
+integer g_iHidden = FALSE;
+integer g_iPosition = 69;
+integer g_iOldPos;
 vector g_vAOoffcolor = <0.5,0.5,0.5>;
 vector g_vAOoncolor = <1,1,1>;
+
+integer DIALOG          = -9000;
+integer DIALOG_RESPONSE = -9001;
+//integer DIALOG_TIMEOUT  = -9002;
+integer MENU_REQUEST    = -9003;
+
+//integer g_iMenuStride;
+integer g_iPage = 0;
+integer g_iNumberOfPages;
+
+string UPMENU = "BACK";
+list g_lCheckBoxes = ["▢","▣"];
+
+Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName)
+{
+    llMessageLinked( LINK_SET, DIALOG, sPrompt+","+llDumpList2String(lChoices,"`")+","+llDumpList2String(lUtilityButtons,"`")+","+(string)iAuth+","+sName, kID);
+    iPage = 0;
+}
+
+MenuOptions(key kID,integer iAuth)
+{
+    string sPrompt = "|=====HUD Options=====|";
+    list lButtons = ["Horizontal", "Vertical", "Order"];
+
+    Dialog(kID,sPrompt,lButtons,[UPMENU], 0, iAuth, "Menu~Options");
+}
+
+MenuOrder(key kID,integer iAuth)
+{
+    string sPrompt = "|=====HUD Order=====|\n Select which button to move.";
+    integer i;
+    list lButtons;
+    integer iPos;
+    for (i=2;i<llGetListLength(g_lPrimOrder);++i)
+    {
+        iPos = llList2Integer(g_lPrimOrder,i);
+        lButtons += llList2List(g_lButtons,iPos,iPos);
+    }
+    Dialog(kID, sPrompt, g_lButtons, ["Reset",UPMENU], 0, iAuth, "Menu~Ordermenu");
+}
 
 FindButtons()// collect buttons names & links
 {
     g_lButtons = [" ", "Minimize"] ;
-    list g_lPrimOrder = [0, 1];  //  '1' - root prim
+    g_lPrimOrder = [0, 1];  //  '1' - root prim
     integer i;
     for (i=2; i<=llGetNumberOfPrims(); ++i)
     {
         g_lButtons += llGetLinkPrimitiveParams(i, [PRIM_DESC]);
         g_lPrimOrder += i;
     }
-    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_primorder",llDumpList2String(g_lPrimOrder,","));
-    g_lPrimOrder = [];
 }
 
 SetButtonTexture(integer link, string name)
@@ -93,7 +130,7 @@ TextureButtons()
         string name = llGetLinkName(i);
         if (i == 1)
         {
-            if ((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_toggle")) //g_iHidden)
+            if (g_iHidden)
             {
                 name = "Maximize";
             }
@@ -113,7 +150,7 @@ PositionButtons()
     integer iPosition = llGetAttached();
     vector vSize = llGetScale();
     //  Allows manual repositioning, without resetting it, if needed
-    if (iPosition != (integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_position") && iPosition > 30)//do this only when attached to the hud
+    if (iPosition != g_iPosition && iPosition > 30)//do this only when attached to the hud
     {
         vector vOffset = <0.01, vSize.y/2+g_Yoff, vSize.z/2+g_Zoff>;
         if (iPosition == ATTACH_HUD_TOP_RIGHT || iPosition == ATTACH_HUD_TOP_CENTER || iPosition == ATTACH_HUD_TOP_LEFT)
@@ -125,9 +162,9 @@ PositionButtons()
             vOffset.y = -vOffset.y;
         }
         llSetPos(vOffset); // Position the Root Prim on screen
-        llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_position",(string)iPosition);
+        g_iPosition = iPosition;
     }
-    if ((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_toggle")) //(g_iHidden)
+    if (g_iHidden)
     {
         SetButtonTexture(1, "Maximize");
         llSetLinkPrimitiveParamsFast(LINK_ALL_OTHERS, [PRIM_POSITION,<1,0,0>]);
@@ -147,9 +184,9 @@ PositionButtons()
         }
         if (iPosition == ATTACH_HUD_TOP_CENTER || iPosition == ATTACH_HUD_BOTTOM)
         {
-            llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_layout",(string)0);
+            g_iHidden = FALSE;
         }
-        if (llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_layout"))
+        if (g_iLayout)
         {
             fYoff = 0;
         }
@@ -158,23 +195,23 @@ PositionButtons()
             fZoff = 0;
         }
         integer i;
-        integer LinkCount=llGetListLength(llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_primorder"),[","],[]));
+        integer LinkCount=llGetListLength(g_lPrimOrder);
         for (i=2;i<=LinkCount;++i)
         {
-            llSetLinkPrimitiveParamsFast(llList2Integer(llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_primorder"),[","],[]),i),[PRIM_POSITION,<0.01, fYoff*(i-1), fZoff*(i-1)>]);
+            llSetLinkPrimitiveParamsFast(llList2Integer(g_lPrimOrder,i),[PRIM_POSITION,<0.01, fYoff*(i-1), fZoff*(i-1)>]);
         }
     }
 }
 
-/*DoButtonOrder(integer iNewPos)// -- Set the button order and reset display
+DoButtonOrder(integer iNewPos)// -- Set the button order and reset display
 {
-    integer iOldPos = llList2Integer(llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_primorder"),[","],[]),(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_oldpose"));
-    iNewPos = llList2Integer(llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_primorder"),[","],[]),iNewPos);
+    integer iOldPos = llList2Integer(g_lPrimOrder, g_iOldPos);
+    iNewPos = llList2Integer(g_lPrimOrder,iNewPos);
     integer i = 2;
     list lTemp = [0,1];
-    for(;i<llGetListLength(llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_primorder"),[","],[]));++i)
+    for(;i<llGetListLength(g_lPrimOrder);++i)
     {
-        integer iTempPos = llList2Integer(llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_primorder"),[","],[]),i);
+        integer iTempPos = llList2Integer(g_lPrimOrder,i);
         if (iTempPos == iOldPos)
         {
             lTemp += [iNewPos];
@@ -188,11 +225,10 @@ PositionButtons()
             lTemp += [iTempPos];
         }
     }
-    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_primorder",llDumpList2String(lTemp,","));
-    llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_oldpose",(string)-1);
+    g_lPrimOrder = lTemp;
+    g_iOldPos = -1;
     PositionButtons();
-    lTemp = [];
-}*/
+}
 
 DetermineColors()
 {
@@ -204,12 +240,12 @@ DetermineColors()
 ShowStatus()
 {
     vector vColor = g_vAOoffcolor;
-    if ((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_power"))
+    if ((integer)llLinksetDataRead("ao_power"))
     {
         vColor = g_vAOoncolor;
     }
     llSetLinkColor(llListFindList(g_lButtons,["Power"]), vColor, ALL_SIDES);
-    if ((integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere"))
+    if ((integer)llLinksetDataRead("ao_sitanywhere"))
     {
         vColor = g_vAOoncolor;
     }
@@ -219,66 +255,22 @@ ShowStatus()
     }
     llSetLinkColor(llListFindList(g_lButtons,["SitAny"]), vColor, ALL_SIDES);
 }
-/*
-MenuInterval(key kID,integer iAuth)
-{
-    string sInterval = "won't change automatically.";
-    if (g_iChangeInterval)
-    {
-        sInterval = "change every "+(string)g_iChangeInterval+" seconds.";
-    }
-    Dialog(kID, "\nStands " +sInterval, ["Never","20","30","45","60","90","120","180"], ["BACK"],iAuth,"Interval");
-}
 
-MenuChooseAnim(key kID, string sAnimState, integer iAuth)
+Notify(string sMsg,key kID)
 {
-    string sAnim = g_sSitAnywhereAnim;
-    if (sAnimState == "Walking")
+    llInstantMessage(kID,sMsg);
+    if(kID != llGetOwner())
     {
-        sAnim = g_sWalkAnim;
+        llOwnerSay(sMsg);
     }
-    else if (sAnimState == "Sitting")
-    {
-        sAnim = g_sSitAnim;
-    }
-    string sPrompt = "\n"+sAnimState+": \""+sAnim+"\"\n";
-    g_lAnims2Choose = llListSort(llParseString2List(llJsonGetValue(g_sJson_Anims,[sAnimState]),["|"],[]),1,TRUE);
-    list lButtons;
-    integer iEnd = llGetListLength(g_lAnims2Choose);
-    integer i;
-    while (++i<=iEnd)
-    {
-        lButtons += (string)i;
-        sPrompt += "\n"+(string)i+": "+llList2String(g_lAnims2Choose,i-1);
-    }
-    Dialog(kID, sPrompt, lButtons, ["BACK"],iAuth,sAnimState);
+    sMsg ="";
+    kID = "";
 }
-
-MenuOptions(key kID,integer iAuth)
-{
-    Dialog(kID,"\nCustomize your AO!",["Horizontal","Vertical","Order"],["BACK"],iAuth, "options");
-}
-
-OrderMenu(key kID,integer iAuth)
-{
-    string sPrompt = "\nWhich button do you want to re-order?";
-    integer i;
-    list lButtons;
-    integer iPos;
-    for (i=2;i<llGetListLength(llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_primorder"),[","],[]));++i)
-    {
-        iPos = llList2Integer(llParseString2List(llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_primorder"),[","],[]),i);
-        lButtons += llList2List(g_lButtons,iPos,iPos);
-    }
-    Dialog(kID, sPrompt, lButtons, ["Reset","BACK"],iAuth, "ordermenu");
-}
-*/
 
 default
 {
     state_entry()
     {
-        
         FindButtons();
         PositionButtons();
         TextureButtons();
@@ -287,9 +279,19 @@ default
 
     attach(key kID)
     {
-        if (kID != NULL_KEY)
+        if (kID == NULL_KEY)
         {
             llResetScript();
+        }
+        else if(llGetAttached() <= 30)
+        {
+            llOwnerSay("Sorry, this device can only be attached to the HUD.");
+            llRequestPermissions(kID, PERMISSION_ATTACH);
+            llDetachFromAvatar();
+        }
+        else
+        {
+            PositionButtons();
         }
     }
 
@@ -317,24 +319,112 @@ default
                 //MenuAO(g_kWearer,CMD_WEARER);
                 if(llDetectedKey(0) == llGetOwner())
                 {
-                    llMessageLinked(LINK_SET,503,sButton,llDetectedKey(0));
+                    llMessageLinked(LINK_SET, MENU_REQUEST, "503|MenuMain", llDetectedKey(0));
                 }
             }
             else if (sButton == "SitAny")
             {
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere",(string)(!(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_sitanywhere")));
+                llLinksetDataWrite("ao_sitanywhere",(string)(!(integer)llLinksetDataRead("ao_sitanywhere")));
             }
             else if (~llSubStringIndex(llToLower(sButton),"ao"))
             {
-                //g_iHidden = !g_iHidden;
+                g_iHidden = !g_iHidden;
                 //llOwnerSay("button to toggle ao touched");
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_toggle",(string)(!(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_toggle")));
+                //llLinksetDataWrite("ao_toggle",(string)(!(integer)llLinksetDataRead("ao_toggle")));
                 PositionButtons();
             }
             else if (sButton == "Power")
             {
-                llLinksetDataWrite(llToLower(llLinksetDataRead("addon_name"))+"_power",(string)(!(integer)llLinksetDataRead(llToLower(llLinksetDataRead("addon_name"))+"_power")));
+                llLinksetDataWrite("ao_power",(string)(!(integer)llLinksetDataRead("ao_power")));
                 ShowStatus();
+            }
+        }
+    }
+    link_message(integer iLink, integer iNum, string sMsg, key kID)
+    {
+        if(iNum == DIALOG_RESPONSE)
+        {
+            list lPar = llParseString2List(sMsg,[","],[]);
+            integer iAuth = llList2Integer(lPar,0);
+            string sMenu = llList2String(lPar,1);
+            sMsg = llList2String(lPar,2);
+            integer iRespring = TRUE;
+            if( sMenu == "Menu~Options")
+            {
+                if(sMsg == UPMENU)
+                {
+                    iRespring = FALSE;
+                    llMessageLinked(LINK_SET, MENU_REQUEST, (string)iAuth+"|MenuAdmin",kID);
+                }
+                else if(sMsg == "Horizontal")
+                {
+                    g_iLayout = FALSE;
+                    PositionButtons();
+                }
+                else if(sMsg == "Vertical")
+                {
+                    g_iLayout = TRUE;
+                    PositionButtons();
+                }
+                else if(sMsg == "Order")
+                {
+                    iRespring = FALSE;
+                    MenuOrder(kID,iAuth);
+                }
+                if(iRespring)
+                {
+                    MenuOptions(kID,iAuth);
+                }
+            }
+            else if(sMenu == "Menu~Ordermenu")
+            {
+                if(sMsg == UPMENU)
+                {
+                    iRespring = FALSE;
+                    MenuOptions(kID, iAuth);
+                }
+                else if(sMsg == "Reset")
+                {
+                    FindButtons();
+                    Notify("Order position reset to default.",kID);
+                    PositionButtons();
+                }
+                else if(llSubStringIndex(sMsg,":") >= 0)
+                {
+                    DoButtonOrder(llList2Integer(llParseString2List(sMsg,[":"],[]),1));
+                }
+                else
+                {
+                    iRespring = FALSE;
+                    list lButtons;
+                    string sPrompt;
+                    integer iTemp = llListFindList(g_lButtons,[sMsg]);
+                    g_iOldPos = llListFindList(g_lPrimOrder, [iTemp]);
+                    sPrompt = "|=====HUD Order=====|\nWhich Slot do you want to swam for the "+sMsg+" button.";
+                    integer i;
+                    for (i=2; i < llGetListLength(g_lPrimOrder);++i)
+                    {
+                        if( g_iOldPos != i)
+                        {
+                            lButtons += [llList2String(g_lButtons,llList2Integer(g_lPrimOrder,i))+":"+(string)i];
+                        }
+                    }
+                    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, sMenu);
+                }
+                if(iRespring)
+                {
+                    MenuOrder(kID,iAuth);
+                }
+            }
+        }
+        else if(iNum == MENU_REQUEST)
+        {
+            list lPar = llParseString2List(sMsg,["|"],[]);
+            integer iAuth = llList2Integer(lPar,0);
+            string sMenu = llList2String(lPar,1);
+            if(sMenu == "MenuOptions")
+            {
+                MenuOptions( kID, iAuth);
             }
         }
     }
