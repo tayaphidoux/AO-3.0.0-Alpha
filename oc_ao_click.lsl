@@ -311,33 +311,37 @@ default
 
     touch_start(integer total_number)
     {
-        if(llGetAttached())
+        string sButton = (string)llGetObjectDetails(llGetLinkKey(llDetectedLinkNumber(0)),[OBJECT_DESC]);
+        if (sButton == "Menu")
         {
-            string sButton = (string)llGetObjectDetails(llGetLinkKey(llDetectedLinkNumber(0)),[OBJECT_DESC]);
-            if (sButton == "Menu")
+            //MenuAO(g_kWearer,CMD_WEARER);
+            if(llDetectedKey(0) == llGetOwner())
             {
-                //MenuAO(g_kWearer,CMD_WEARER);
-                if(llDetectedKey(0) == llGetOwner())
-                {
-                    llMessageLinked(LINK_SET, MENU_REQUEST, "503|MenuMain", llDetectedKey(0));
-                }
+                llMessageLinked(LINK_SET, MENU_REQUEST, "503|MenuMain", llDetectedKey(0));
             }
-            else if (sButton == "SitAny")
+        }
+        else if (~llSubStringIndex(llToLower(sButton),"ao"))
+        {
+            g_iHidden = !g_iHidden;
+            //llOwnerSay("button to toggle ao touched");
+            //llLinksetDataWrite("ao_toggle",(string)(!(integer)llLinksetDataRead("ao_toggle")));
+            PositionButtons();
+        }
+        else if (!(integer)llLinksetDataRead("ao_noaccess"))
+        {
+            if (sButton == "SitAny")
             {
                 llLinksetDataWrite("ao_sitanywhere",(string)(!(integer)llLinksetDataRead("ao_sitanywhere")));
-            }
-            else if (~llSubStringIndex(llToLower(sButton),"ao"))
-            {
-                g_iHidden = !g_iHidden;
-                //llOwnerSay("button to toggle ao touched");
-                //llLinksetDataWrite("ao_toggle",(string)(!(integer)llLinksetDataRead("ao_toggle")));
-                PositionButtons();
             }
             else if (sButton == "Power")
             {
                 llLinksetDataWrite("ao_power",(string)(!(integer)llLinksetDataRead("ao_power")));
                 ShowStatus();
             }
+        }
+        else if((integer)llLinksetDataRead("ao_noaccess"))
+        {
+            llInstantMessage(llDetectedKey(0),"Sorry Acess to these functions have been revoked!");
         }
     }
     link_message(integer iLink, integer iNum, string sMsg, key kID)
