@@ -35,10 +35,7 @@ list g_lIgnore = [
 
 TypingAO()
 {
-    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
-    {
-        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
-    }
+    llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
     if(llLinksetDataRead("Typing") != "" && llGetInventoryType(llLinksetDataRead("Typing")) == INVENTORY_ANIMATION && (integer)llLinksetDataRead("ao_typingctl"))
     {
         if(!(integer)llLinksetDataRead("ao_typing") || !(integer)llLinksetDataRead("ao_power"))
@@ -149,10 +146,8 @@ SetAO()
 
 StopAO()
 {
-    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
-    {
-        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
-    }
+    
+    llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
     llSetTimerEvent(0);
     llResetAnimationOverride("ALL");
     if(llLinksetDataRead("Typing") != "")
@@ -179,10 +174,7 @@ check_settings(string sToken, string sDefaulVal)
 
 gsitAO()
 {
-    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
-    {
-        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
-    }
+    llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
     llResetAnimationOverride("ALL");
     if((integer)llLinksetDataRead("ao_sitanywhere"))
     {
@@ -252,19 +244,9 @@ default
         else
         {
             // Turn off the ao when not worn.
-            if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
-            {
-                llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
-            }
+            llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
             llOwnerSay("Detaching so stoping animations!");
             llResetAnimationOverride("ALL");
-        }
-    }
-
-    run_time_permissions(integer iPerm)
-    {
-        if(iPerm & PERMISSION_OVERRIDE_ANIMATIONS)
-        {
         }
     }
 
@@ -276,10 +258,7 @@ default
             {
                 if((integer)sValue)
                 {
-                    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
-                    {
-                        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
-                    }
+                    llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
                     llOwnerSay("Powering AO on!");
                     llLinksetDataWrite("ao_animstate",llGetAnimation(llGetOwner()));
                     SetAO();
@@ -294,10 +273,7 @@ default
             {
                 if(llListFindList(g_lAnimStates,[sName]) != -1 && sValue != "" && !(integer)llLinksetDataRead("ao_sitanywhere"))
                 {
-                    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
-                    {
-                        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
-                    }
+                    llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
                     llResetAnimationOverride(sName);
                     llSleep(0.1);
                     llSetAnimationOverride(sName,sValue);
@@ -320,10 +296,7 @@ default
                 }
                 else if(sName == "ao_sitctl")
                 {
-                    if(!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION|PERMISSION_OVERRIDE_ANIMATIONS))
-                    {
-                        llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
-                    }
+                    llRequestPermissions((key)llGetOwner(),PERMISSION_OVERRIDE_ANIMATIONS | PERMISSION_TRIGGER_ANIMATION);
                     if((integer)sValue)
                     {
                         SetAO();
