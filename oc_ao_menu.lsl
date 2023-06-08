@@ -62,7 +62,7 @@ Menu(key kID, integer iAuth)
     list lButtons = [];
     if(iAuth == CMD_WEARER && (integer)llLinksetDataRead("ao_noaccess"))
     {
-        lButtons = [];
+        lButtons = ["-"];
     }
     else
     {
@@ -238,16 +238,16 @@ MenuAdmin(key kID, integer iAuth)
     ;
     list lButtons = [];
     list lUtilityButtons = [];// this is only here so we can set ultities to respect online and offline mode.
-    if(iAuth == CMD_WEARER && (integer)llLinksetDataRead("no_access"))
+    if(iAuth == CMD_WEARER && (integer)llLinksetDataRead("ao_noaccess"))
     {
         lButtons = ["Reset AO"];
         if(!(integer)llLinksetDataRead("ao_online"))
         {
-            lUtilityButtons = ["Reset AO","CONNECT",UPMENU];
+            lUtilityButtons = ["CONNECT",UPMENU];
         }
         else
         {
-            lUtilityButtons = ["Reset AO","Collar",UPMENU];
+            lUtilityButtons = ["Collar",UPMENU];
         }
     }
     else
@@ -304,7 +304,7 @@ default
                     MenuAdmin(kID, iAuth);
                     iRespring = FALSE;
                 }
-                else if (sMsg == "Anims")
+                else if (sMsg == "Anims" && (integer)llLinksetDataRead("ao_loaded"))
                 {
                     iRespring = FALSE;
                     MenuMultiAnims(kID, 0, iAuth);
