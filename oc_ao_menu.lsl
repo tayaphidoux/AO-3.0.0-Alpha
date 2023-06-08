@@ -252,7 +252,7 @@ MenuAdmin(key kID, integer iAuth)
     }
     else
     {
-        lButtons = [b_sLock,b_sAccess,"HUD Options","Reset AO"];
+        lButtons = [b_sLock,b_sAccess,b_sPlugins,"HUD Options","Reset AO"];
         if( (integer)llLinksetDataRead("ao_online")) // we only need certain buttons when they are nesissary.
         {
             lUtilityButtons = ["Collar","DISCONNECT",UPMENU];
@@ -570,15 +570,15 @@ default
                     iRespring = FALSE;
                     Menu(kID, iAuth);
                 }
-                else if (sMsg == "b_sLock")
+                else if (sMsg == b_sLock)
                 {
                     llLinksetDataWrite("ao_lock",(string)(!(integer)llLinksetDataRead("ao_lock")));
                 }
-                else if (sMsg == "b_sAccess")
+                else if (sMsg == b_sAccess)
                 {
                     llLinksetDataWrite("ao_noaccess",(string)(!(integer)llLinksetDataRead("ao_noaccess")));
                 }
-                else if (sMsg == "b_sPlugins")
+                else if (sMsg == b_sPlugins)
                 {
                     llLinksetDataWrite("ao_plugins",(string)(!(integer)llLinksetDataRead("ao_plugins")));
                 }
