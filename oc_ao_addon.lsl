@@ -14,7 +14,7 @@ integer API_CHANNEL = 0x60b97b5e;
 
 //list g_lCollars;
 string g_sAddon = "ao";
-string g_sVersion = "3.0.2";
+string g_sVersion = "3.0.3";
 
 //integer CMD_ZERO            = 0;
 integer CMD_OWNER           = 500;
