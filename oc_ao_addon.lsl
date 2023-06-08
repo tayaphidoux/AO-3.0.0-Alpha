@@ -38,8 +38,8 @@ integer CMD_WEARER          = 503;
 //integer AUTH_REQUEST = 600;
 //integer AUTH_REPLY = 601;
 
-//integer RLV_OFF = 6100; // send to inform plugins that RLV is disabled now, no message or key needed
-//integer RLV_ON = 6101; // send to inform plugins that RLV is enabled now, no message or key needed
+integer RLV_OFF = 6100; // send to inform plugins that RLV is disabled now, no message or key needed
+integer RLV_ON = 6101; // send to inform plugins that RLV is enabled now, no message or key needed
 
 integer LM_SETTING_SAVE     = 2000; //scripts send messages on this channel to have settings saved, <string> must be in form of "token=value"
 integer LM_SETTING_REQUEST  = 2001; //when startup, scripts send requests for settings on this channel
@@ -89,6 +89,11 @@ UserCommand(integer iNum, string sStr, key kID)
     }
     else
     {
+        if(iNum == CMD_WEARER && (integer)llLinksetDataRead("ao_noaccess") && iNum == CMD_WEARER)
+        {
+            Notify("Sorry your permission to access the ao has been revoked!", kID);
+            return;
+        }
         list lCommands = llParseString2List(sStr,[" "],[g_sAddon,llToLower(g_sAddon)]);
         string sToken = llToLower(llList2String(lCommands,1));
         string sVal = llList2String(lCommands,2);
@@ -119,6 +124,14 @@ UserCommand(integer iNum, string sStr, key kID)
         else if ( sToken == "off")
         {
             llLinksetDataWrite("ao_power",(string)FALSE);
+        }
+        else if (sToken == "lock")
+        {
+            llLinksetDataWrite("ao_lock",(string)TRUE);
+        }
+        else if (sToken == "unlock")
+        {
+            llLinksetDataWrite("ao_lock",(string)FALSE);
         }
         else if ( sToken == "load")
         {
@@ -186,6 +199,46 @@ Link(string packet, integer iNum, string sStr, key kID)
     pkt = "";
     packet = "";
     sStr = "";
+}
+NotifyOwner()
+{
+    if((integer)llLinksetDataRead("ao_noaccess") || (integer)llLinksetDataRead("ao_lock"))
+    {
+        list lOwner = llParseString2List(llLinksetDataRead("auth_owner"),[","],[]);
+        integer i;
+        integer iEnd = llGetListLength(lOwner)-1;
+        for(i; i<iEnd; i++)
+        {
+            llInstantMessage(llList2Key(lOwner,i),"Allert the settings on secondlife:///app/agent/"+(string)llGetOwner()+"/about's ao are being reset");
+        }
+    }
+}
+
+
+Notify(string sMsg,key kID)
+{
+    llInstantMessage(kID,sMsg);
+    if(kID != llGetOwner())
+    {
+        llOwnerSay(sMsg);
+    }
+    sMsg ="";
+    kID = "";
+}
+
+doLock()
+{
+    if((integer)llLinksetDataRead("global_rlv"))
+    {
+        if((integer)llLinksetDataRead("ao_lock"))
+        {
+            llOwnerSay("@detach=n");
+        }
+        else
+        {
+            llOwnerSay("@detach=y");
+        }
+    }
 }
 
 goOnline()
@@ -291,8 +344,20 @@ default // in this state we check if the collar is availble and we can connect.
 
     linkset_data(integer iAction, string sName, string sValue)
     {
-        if(iAction == LINKSETDATA_RESET)
+        if(iAction == LINKSETDATA_UPDATE)
         {
+            if(sName == "global_rlv" && (integer)sValue)
+            {
+                doLock();
+            }
+            else if(sName == "ao_lock")
+            {
+                doLock();
+            }
+        }
+        else if(iAction == LINKSETDATA_RESET)
+        {
+            NotifyOwner();
             llResetScript();
         }
     }
@@ -427,7 +492,7 @@ state online
                         string sVal   = llList2String(lPar, 2);
                         if( sToken == "ao")
                         {
-                            if( sVar == "card" && sVal != llLinksetDataRead("ao_card"))
+                            if( sVar == "card" && sVal != llLinksetDataRead("ao_card") && (integer)llLinksetDataRead("ao_plugins"))
                             {
                                 if(llGetInventoryType(sVal) == INVENTORY_NOTECARD)
                                 {
@@ -493,9 +558,18 @@ state online
             {
                 Link("from_addon", LM_SETTING_SAVE, "ao_card="+sValue, "");
             }
+            else if(sName == "global_rlv" && (integer)sValue)
+            {
+                doLock();
+            }
+            else if(sName == "ao_lock")
+            {
+                doLock();
+            }
         }
         else if(iAction == LINKSETDATA_RESET)
         {
+            NotifyOwner();
             llListenRemove((integer)llLinksetDataRead("ao_listen"));
             llResetScript();
         }
@@ -554,7 +628,7 @@ state offline
         }
     }
 
-    linkset_data(integer iAction,string sName,string sVal)
+    linkset_data(integer iAction,string sName,string sValue)
     {
         if(iAction == LINKSETDATA_UPDATE)
         {
@@ -564,10 +638,19 @@ state offline
                 llListenRemove((integer)llLinksetDataRead("ao_listen"));
                 state default;
             }
+            else if(sName == "global_rlv" && (integer)sValue)
+            {
+                doLock();
+            }
+            else if(sName == "ao_lock")
+            {
+                doLock();
+            }
         }
         else if(iAction == LINKSETDATA_RESET)
         {
             // we want to remove the listen to help clear the way for a restart.
+            NotifyOwner();
             llListenRemove((integer)llLinksetDataRead("ao_listen"));
             llResetScript();
         }
