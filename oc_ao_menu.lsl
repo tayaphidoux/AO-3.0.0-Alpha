@@ -129,7 +129,9 @@ MenuMultiAnims(key kID, integer iPage, integer iAuth)
     {
         g_iPage = 0;
     }
-    string sPrompt = "|=====Multi Anims=====|";
+    string sPrompt = "|=====Multi Anims=====|"+
+                "\n ► Next Animation on the list ."+
+                "\n ◄ Last Animation on the list.";
     list lButtons  = [];
     integer i;
     integer iEnd = llGetListLength(g_lAnimStates);
@@ -169,8 +171,6 @@ MenuAnimation(key kID, string sAnimState, integer iAuth)
     b_sShuffle = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_"+sAnimState+"rand"))+"Shuffle";
     // set status information.
     sPrompt +=  "\n Current "+sAnimState+" Timer:"+llLinksetDataRead("ao_"+sAnimState+"change")+
-                "\n ► Next Animation on the list ."+
-                "\n ◄ Last Animation on the list."+
                 "\n"+b_sShuffle;
     // Populate Buttons list.
     list lButtons  = [];
@@ -183,7 +183,7 @@ MenuAnimation(key kID, string sAnimState, integer iAuth)
         lButtons = ["Select Anim","Timer"];
     }
     // Start dialog.
-    Dialog(kID, sPrompt, lButtons, ["◄", UPMENU, "►"], 0, iAuth, "Animation~"+sAnimState);
+    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Animation~"+sAnimState);
 }
 
 MenuTime(key kID, string sAnimState, integer iAuth)
@@ -446,30 +446,6 @@ default
                 else if (sMsg == b_sShuffle)
                 {
                     llLinksetDataWrite("ao_"+sAnimState+"rand",(string)(!(integer)llLinksetDataRead("ao_"+sAnimState+"rand")));
-                }
-                else if (sMsg == "►")
-                {
-                    list lAnims = llParseString2List(llLinksetDataRead("ao_"+sAnimState),[","],[]);
-                    integer iIndex = llListFindList(lAnims,[llLinksetDataRead(sAnimState)]);
-                    if(iIndex > llGetListLength(lAnims)-1)
-                    {
-                        iIndex = 0;
-                    }
-                    string sAnim = llList2String(lAnims,iIndex+1);
-                    Notify("Setting Animation to "+sAnim+" for State "+sAnimState, kID);
-                    llLinksetDataWrite(sAnimState,sAnim);
-                }
-                else if (sMsg == "◄")
-                {
-                    list lAnims = llParseString2List(llLinksetDataRead("ao_"+sAnimState),[","],[]);
-                    integer iIndex = llListFindList(lAnims,[llLinksetDataRead(sAnimState)]);
-                    if(iIndex < 0)
-                    {
-                        iIndex = llGetListLength(lAnims)-1;
-                    }
-                    string sAnim = llList2String(lAnims,iIndex-1);
-                    Notify("Setting Animation to "+sAnim+" for State "+sAnimState, kID);
-                    llLinksetDataWrite(sAnimState,sAnim);
                 }
                 if(iRespring)
                 {
