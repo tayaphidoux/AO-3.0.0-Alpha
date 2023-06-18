@@ -23,7 +23,28 @@ list g_lAnimStates = [ //http://wiki.secondlife.com/wiki/LlSetAnimationOverride
 ];
 
 list g_lSwimStates = ["Swim Forward","Swim Hover","Swim Slow","Swim Up","Swim Down"];
-
+clear_states()
+{
+    integer i;
+    integer iEnd = llGetListLength(g_lAnimStates);
+    for(i; i<iEnd ;i++)
+    {
+        string sState = llList2String(g_lAnimStates,i);
+        llLinksetDataDelete(sState);
+        llLinksetDataDelete("ao_"+sState);
+    }
+    i=0;
+    iEnd = llGetListLength(g_lSwimStates);
+    for(i; i<iEnd ;i++)
+    {
+        string sState = llList2String(g_lSwimStates,i);
+        llLinksetDataDelete(sState);
+        llLinksetDataDelete("ao_"+sState);
+    }
+    llResetTime();
+    g_iCardLine = 0;
+    g_kCard = llGetNotecardLine(llLinksetDataRead("ao_card"),g_iCardLine);
+}
 check_settings(string sToken, string sDefaulVal)
 {
     if(!~llListFindList(llLinksetDataListKeys(0,0),[sToken])) // token/key doesn't exist in the list of keys
@@ -38,6 +59,23 @@ check_settings(string sToken, string sDefaulVal)
 //
 default
 {
+    state_entry()
+    {
+        if(llLinksetDataRead("ao_card") != "" && (integer)llLinksetDataRead("ao_power"))
+        {
+            clear_states();
+        }
+    }
+    changed(integer change)
+    {
+        if(change & CHANGED_INVENTORY)
+        {
+            if(llLinksetDataRead("ao_card") != "" && (integer)llLinksetDataRead("ao_power"))
+            {
+                clear_states();
+            }
+        }
+    }
     linkset_data(integer iAction, string sName, string sVal)
     {
         if(iAction == LINKSETDATA_UPDATE)
@@ -46,9 +84,7 @@ default
             !(integer)llLinksetDataRead("ao_loaded"))
             {
                 llOwnerSay("loading note card "+sVal);
-                llResetTime();
-                g_iCardLine = 0;
-                g_kCard = llGetNotecardLine(sVal,g_iCardLine);
+                clear_states();
             }
         }
     }
