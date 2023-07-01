@@ -113,7 +113,10 @@ default
                 string sAnim = llList2String(lAnims,iIndex);
                 if(llGetInventoryType(sAnim) == INVENTORY_ANIMATION && sAnim != llLinksetDataRead(sState))
                 {
-                    llLinksetDataWrite(sState,sAnim);
+                    if(sState != "Sitting" || (integer)llLinksetDataRead("ao_sitctl"))
+                    {
+                        llLinksetDataWrite(sState,sAnim);
+                    }
                     llLinksetDataWrite("ao_"+sState+"timer",(string)(llGetUnixTime()+(integer)llLinksetDataRead("ao_"+sState+"change")));
                 }
                 sAnim = "";
