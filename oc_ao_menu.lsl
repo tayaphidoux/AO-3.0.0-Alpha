@@ -223,7 +223,7 @@ MenuChooseAnim(key kID, string sAnimState, integer iPage, integer iAuth)
         g_iNumberOfPages = llGetListLength(lButtons)/9;
         lButtons = llList2List(lButtons,iPage*9,iPage*9+8);
     }
-    Dialog(kID, sPrompt, lButtons, ["BACK"],iPage,iAuth,"Select~"+sAnimState);
+    Dialog(kID, sPrompt, lButtons, lStaticButtons,iPage,iAuth,"Select~"+sAnimState);
 }
 
 MenuAdmin(key kID, integer iAuth)
