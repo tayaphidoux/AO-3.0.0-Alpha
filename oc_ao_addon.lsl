@@ -613,7 +613,7 @@ state offline
             {
                 UserCommand(CMD_WEARER, sMsg, kID);
             }
-            else if(llListFindList(llParseString2List(llLinksetDataRead("auth_owners"),[","],[]),[(string)kID]) != -1)
+            else if(llListFindList(llParseString2List(llLinksetDataRead("auth_owner"),[","],[]),[(string)kID]) != -1)
             {
                 UserCommand(CMD_OWNER, sMsg, kID);
             }
