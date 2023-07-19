@@ -21,6 +21,7 @@ string b_sShuffle;
 string b_sLock;
 string b_sAccess;
 string b_sPlugins;
+string b_sAddon;
 list g_lCheckBoxes = ["▢","▣"];
 list g_lCustomCards = [];
 list g_lAnims2Choose = [];
@@ -231,37 +232,46 @@ MenuAdmin(key kID, integer iAuth)
     b_sLock     = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_lock"))+"Lock";
     b_sAccess   = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_noaccess"))+"No Access";
     b_sPlugins  = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_plugins"))+"Pluggins";
+    b_sAddon    = llList2String(g_lCheckBoxes,(integer)llLinksetDataRead("ao_addon"))+"Addon";
     string sPrompt = "|=====Adnimistration=====|"+
-        "\n "+b_sLock+" - enables no detach when rlv is present."+
+        "\n "+b_sLock+" - Enables no detach when rlv is present."+
         "\n "+b_sAccess+" - Prevents the sub from accessing the menu except to reset the ao or connect it if the owner has no access."+
-        "\n "+b_sPlugins+" - allows the ao to accept note cards to load from plugins and addons via the collar setting."
+        "\n "+b_sPlugins+" - Allows the ao to accept note cards to load from plugins and addons via the collar setting."+
+        "\n "+b_sAddon+" - Determines weather the ao will connect to the collar." 
     ;
     list lButtons = [];
     list lUtilityButtons = [];// this is only here so we can set ultities to respect online and offline mode.
     if(iAuth == CMD_WEARER && (integer)llLinksetDataRead("ao_noaccess"))
     {
         lButtons = ["Reset AO"];
-        if(!(integer)llLinksetDataRead("ao_online"))
+        if((integer)llLinksetDataRead("ao_addon"))
         {
-            lUtilityButtons = ["CONNECT",UPMENU];
-        }
-        else
-        {
-            lUtilityButtons = ["Collar",UPMENU];
+            if(!(integer)llLinksetDataRead("ao_online"))
+            {
+                lUtilityButtons = ["CONNECT"];
+            }
+            else
+            {
+                lUtilityButtons = ["Collar"];
+            }
         }
     }
     else
     {
-        lButtons = [b_sLock,b_sAccess,b_sPlugins,"HUD Options","Reset AO"];
-        if( (integer)llLinksetDataRead("ao_online")) // we only need certain buttons when they are nesissary.
+        lButtons = [b_sLock,b_sAccess,b_sPlugins,b_sAddon,"HUD Options","Reset AO"];
+        if((integer)llLinksetDataRead("ao_addon"))
         {
-            lUtilityButtons = ["Collar","DISCONNECT",UPMENU];
-        }
-        else
-        {
-            lUtilityButtons = ["CONNECT",UPMENU];
+            if( (integer)llLinksetDataRead("ao_online")) // we only need certain buttons when they are nesissary.
+            {
+                lUtilityButtons = ["Collar","DISCONNECT"];
+            }
+            else
+            {
+                lUtilityButtons = ["CONNECT"];
+            }
         }
     }
+    lUtilityButtons += [UPMENU];
 
     Dialog(kID, sPrompt, lButtons, lUtilityButtons, 0, iAuth, "Menu~Admin");
 }
@@ -557,6 +567,10 @@ default
                 else if (sMsg == b_sPlugins)
                 {
                     llLinksetDataWrite("ao_plugins",(string)(!(integer)llLinksetDataRead("ao_plugins")));
+                }
+                else if (sMsg == b_sAddon)
+                {
+                    llLinksetDataWrite("ao_addon",(string)(!(integer)llLinksetDataRead("ao_addon")));
                 }
                 else if (sMsg == "Reset AO") // so we can clear memory in the event of bugs.
                 {
