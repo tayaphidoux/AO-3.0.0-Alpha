@@ -9,6 +9,24 @@
     ------------------------------------
     | Name | Date | comment            |
     ------------------------------------
+    Phidoux (taya.maruti)   June 1 2023 - introduced as new pr for newly created ao git.
+                                       - changes fixes Reset AO button not working.
+                                       - changed timer on menu to prevent drop out from 1s to 60s
+                                       - Consolidated the timer buttons to reduce script memory and time.
+                            June 6 2023 - Removed wing and tail and made the ao project retain only the functionality of the previous version.
+                                       - added features sets.
+                                            being able to put multiple animations on any state, and setting a random timer or selecting them,
+                                            being able to put multiple copies of the state in note card to get around string limit, will be presented as a single list
+                            June 8 2023 - added feature sets.
+                                            Add support for owner locking and denying of menu access.
+                                            Add plugins mode which disables the ao_card being applied unless the user wishes to allow addons to update the ao.
+                                        - Minor bug fixes.
+                            June 15 2023 - removed the stray page buttons.
+                            June 19 2023 - Fixed loading sanitation regression.
+                            July 1 2023 - fix to timer to prevent sit override working when its disabled.
+                            July 7 2023 - fix choose animation button not showing page buttons when over 11 animations are present.
+                            July 18 2023 - Fixed bug where owner gets not authorized when using chat commands.
+                                         - Added the comments above for log history.
 */
 integer API_CHANNEL = 0x60b97b5e;
 
