@@ -14,7 +14,7 @@ integer API_CHANNEL = 0x60b97b5e;
 
 //list g_lCollars;
 string g_sAddon = "ao";
-string g_sVersion = "3.0.5";
+string g_sVersion = "3.0.6";
 
 //integer CMD_ZERO            = 0;
 integer CMD_OWNER           = 500;
@@ -278,19 +278,16 @@ default // in this state we check if the collar is availble and we can connect.
         check_settings("ao_prefix",llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1))); // sets up prefix for stand alone mode.
         check_settings("ao_online",(string)TRUE); // we want to default to collar connection.
         llOwnerSay("Initializing Please Wait!");
-        if(llGetAttached())
+        if((integer)llLinksetDataRead("ao_online") && (integer)llLinksetDataRead("ao_addon"))
         {
-            if((integer)llLinksetDataRead("ao_online"))
-            {
-                llLinksetDataWrite("ao_rezzed",(string)TRUE);
-                //g_iJustRezzed = TRUE;
-                llSetTimerEvent(30);
-                goOnline();
-            }
-            else
-            {
-                state offline;
-            }
+            llLinksetDataWrite("ao_rezzed",(string)TRUE);
+            //g_iJustRezzed = TRUE;
+            llSetTimerEvent(30);
+            goOnline();
+        }
+        else
+        {
+            state offline;
         }
     }
     attach(key kID)
@@ -549,7 +546,7 @@ state online
     {
         if(iAction == LINKSETDATA_UPDATE)
         {
-            if(sName == "ao_online")
+            if(sName == "ao_online"|| sName == "ao_addon")
             {
                 llListenRemove((integer)llLinksetDataRead("ao_listen"));
                 state default;
@@ -632,7 +629,7 @@ state offline
     {
         if(iAction == LINKSETDATA_UPDATE)
         {
-            if(sName == "ao_online")
+            if(sName == "ao_online"|| sName == "ao_addon")
             {
                 // the listen will be used for online mode if available
                 llListenRemove((integer)llLinksetDataRead("ao_listen"));
