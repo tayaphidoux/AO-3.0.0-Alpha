@@ -23,8 +23,15 @@ list g_lAnimStates = [ //http://wiki.secondlife.com/wiki/LlSetAnimationOverride
 ];
 
 list g_lSwimStates = ["Swim Forward","Swim Hover","Swim Slow","Swim Up","Swim Down"];
+
+integer g_iPowered = FALSE;
 clear_states()
 {
+    if((integer)llLinksetDataRead("ao_power"))
+    {
+        g_iPowered = TRUE;
+        llLinksetDataWrite("ao_power",(string)FALSE);
+    }
     integer i;
     integer iEnd = llGetListLength(g_lAnimStates);
     for(i; i<iEnd ;i++)
@@ -227,8 +234,12 @@ default
                     "Note Card "+llLinksetDataRead("ao_card")+" Loaded into Linkset Data in "+(string)llGetTime()+"s"+
                     "\nLinksetMemory free: "+(string)llLinksetDataAvailable()+"bytes"
                 );
-
                 llLinksetDataWrite("ao_loaded",(string)TRUE);
+                if(g_iPowered)
+                {
+                    g_iPowered = FALSE;
+                    llLinksetDataWrite("ao_power",(string)TRUE);
+                }
                 g_kCard = "";
             }
         }
